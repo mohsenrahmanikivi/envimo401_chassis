@@ -17,7 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   segway_msgs
 )
 
-message("-- Segway Robtics Notice: This external lib and include path can be changed by users.")
+message("-- Segway Robtics Notice: The external lib and include path can be changed by users.")
 
 #This setting can be changed by users.
 set(EXTERNAL_INCLUDE_PATH ${CMAKE_SOURCE_DIR}/../../LibAPI/include)
