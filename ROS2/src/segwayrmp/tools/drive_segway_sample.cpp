@@ -115,9 +115,11 @@ char get_keyboard()
     return keyvalue;
 }
 
-void goal_response_callback(std::shared_future<goalHandleIapCmd::SharedPtr> future)
+//void goal_response_callback(std::shared_future<goalHandleIapCmd::SharedPtr> future)
+void goal_response_callback(goalHandleIapCmd::SharedPtr goal_handle)
+
 {
-  auto goal_handle = future.get();
+ // auto goal_handle = future.get();
   if (!goal_handle) {
     RCLCPP_ERROR(rclcpp::get_logger("drive_segway_sample"), "Goal was rejected by server");
   } else {
