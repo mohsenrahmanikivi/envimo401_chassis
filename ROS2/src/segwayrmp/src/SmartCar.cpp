@@ -9,7 +9,7 @@ int main(int argc, char * argv[])
     //make compability with humble
     auto node = std::make_shared<rclcpp::Node>("SmartCar");
 
-    node->declare_parameter<std::string>("serial_full_name", "/dev/ttyUSB0");
+    node->declare_parameter<std::string>("serial_full_name", "ttyUSB0");
     std::string serial_full_name;
     node->get_parameter("serial_full_name", serial_full_name);
     // init_control()parameter: Fill in the full path name of the actual serial port being used
