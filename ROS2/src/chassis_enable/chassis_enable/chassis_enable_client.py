@@ -15,17 +15,17 @@ class ChassisEnableClient(Node):
         request.ros_set_chassis_enable_cmd = True
 
         max_retries = 5
-        for attempt in range(max_retries):
+        for i in range(max_retries):
             future = self.client.call_async(request)
             rclpy.spin_until_future_complete(self, future)
             if future.result() is not None:
-                self.get_logger().info('Service call succeeded')
+                self.get_logger().info('Chassis enable command succeeded.')
                 break
             else:
-                self.get_logger().warn(f'Service call failed. Retrying ({attempt + 1}/{max_retries})...')
+                self.get_logger().warn(f'Attempt {i + 1} failed, retrying...')
                 time.sleep(0.5)
-
-        self.get_logger().info('Exiting client node.')
+        else:
+            self.get_logger().error('Failed to enable chassis after 5 attempts.')
 
 
 def main(args=None):
