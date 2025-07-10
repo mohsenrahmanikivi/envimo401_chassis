@@ -1,68 +1,92 @@
+#!/usr/bin/env python3
+
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from segway_msgs.srv import RosSetChassisEnableCmd
+from rclpy.qos import QoSProfile
 import time
 
 class ChassisEnable(Node):
     def __init__(self):
         super().__init__('chassis_enable')
 
-        self.latest_cmd_vel = Twist()
-
-        self.publisher = self.create_publisher(Twist, '/cmd_vel_const', 10)
-        self.subscription = self.create_subscription(
+        # QoS to ensure reliable delivery
+        qos = QoSProfile(depth=10)
+        self.publisher_ = self.create_publisher(Twist, 'cmd_vel_const', qos)
+        self.subscription_ = self.create_subscription(
             Twist,
-            '/cmd_vel',
+            'cmd_vel',
             self.cmd_vel_callback,
-            10
-        )
+            qos)
 
-        self.timer = self.create_timer(0.01, self.publish_cmd_vel)
+        self.cmd_vel_msg = Twist()
+        self.cmd_vel_received = False
 
-        success = self.call_chassis_enable_service_with_retries(max_retries=5, delay_sec=0.5)
-        if not success:
-            self.get_logger().error('Chassis enable failed after retries. Exiting.')
-            rclpy.shutdown()
+        # Timer to publish at 100 Hz
+        self.timer_ = self.create_timer(0.01, self.publish_cmd_vel_const)
 
-    def cmd_vel_callback(self, msg: Twist):
-        self.latest_cmd_vel = msg
+        # Delay chassis enable service call by 1 second
+        self.create_timer(1.0, self.enable_chassis_once, callback_group=None)
+        self.service_called = False
 
-    def publish_cmd_vel(self):
-        self.publisher.publish(self.latest_cmd_vel)
+    def cmd_vel_callback(self, msg):
+        self.cmd_vel_msg = msg
+        self.cmd_vel_received = True
 
-    def call_chassis_enable_service_with_retries(self, max_retries=5, delay_sec=0.5):
+    def publish_cmd_vel_const(self):
+        if not self.cmd_vel_received:
+            self.cmd_vel_msg = Twist()
+        self.publisher_.publish(self.cmd_vel_msg)
+
+    def enable_chassis_once(self):
+        if self.service_called:
+            return
+        self.service_called = True
+        self.call_enable_service()
+
+    def call_enable_service(self):
         client = self.create_client(RosSetChassisEnableCmd, '/set_chassis_enable')
 
-        for attempt in range(1, max_retries + 1):
-            self.get_logger().info(f'Attempt {attempt}: Waiting for /set_chassis_enable service...')
-            if client.wait_for_service(timeout_sec=5.0):
-                request = RosSetChassisEnableCmd.Request()
-                request.ros_set_chassis_enable_cmd = True
+        if not client.wait_for_service(timeout_sec=2.0):
+            self.get_logger().error('Service /set_chassis_enable not available.')
+            rclpy.shutdown()
+            return
 
-                future = client.call_async(request)
-                rclpy.spin_until_future_complete(self, future)
+        request = RosSetChassisEnableCmd.Request()
+        request.ros_set_chassis_enable_cmd = True
 
-                result = future.result()
-                if result and result.ros_set_chassis_enable_cmd:
+        attempt = 0
+        max_attempts = 5
+        success = False
+
+        while attempt < max_attempts and rclpy.ok():
+            future = client.call_async(request)
+            rclpy.spin_until_future_complete(self, future, timeout_sec=1.0)
+
+            if future.result() is not None:
+                if future.result().ros_set_chassis_enable_cmd == True:
                     self.get_logger().info('Chassis enabled successfully.')
-                    return True
+                    success = True
+                    break
                 else:
-                    self.get_logger().warn('Service call returned failure.')
+                    self.get_logger().error('Chassis enable failed (response false).')
             else:
-                self.get_logger().warn('Service not available.')
+                self.get_logger().error('Service call failed or timed out.')
 
-            time.sleep(delay_sec)
+            attempt += 1
+            time.sleep(0.5)
 
-        return False
+        if not success:
+            self.get_logger().fatal('Failed to enable chassis after retries.')
+            rclpy.shutdown()
 
 def main(args=None):
     rclpy.init(args=args)
     node = ChassisEnable()
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
