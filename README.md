@@ -16,6 +16,9 @@ These is the ROS1 and ROS2 packages for Segway chassis 100, 200, and 400 series.
 To do so 
 ```bash
 export LD_LIBRARY_PATH=/ssd/workspaces/ros2_ws/src/envimo401_chassis/LibAPI/lib:$LD_LIBRARY_PATH
+
+export LD_LIBRARY_PATH=/home/envimo/ros2_ws/src/envimo401_chassis/LibAPI/lib:$LD_LIBRARY_PATH
+
 ```
 
 
