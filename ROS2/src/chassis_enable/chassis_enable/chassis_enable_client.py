@@ -21,7 +21,7 @@ class ChassisEnableClient(Node):
 
     def try_enable_chassis(self):
         if self.enabled:
-            # Already enabled, keep running
+            # Already enabled, keep running, no more retries
             return False
 
         elapsed = (self.get_clock().now() - self.start_time).nanoseconds * 1e-9
@@ -30,13 +30,14 @@ class ChassisEnableClient(Node):
             rclpy.shutdown()
             return True  # Stop spinning
 
+        self.get_logger().info(f'Attempting to enable chassis (elapsed {elapsed:.2f}s)...')
         future = self.client.call_async(self.request)
         rclpy.spin_until_future_complete(self, future)
 
         response = future.result()
         if response is not None:
             self.get_logger().info(f'Service response: {response}')
-            # Check for common response fields
+            # Check common response fields for success
             if hasattr(response, 'result'):
                 if response.result == 1:
                     self.get_logger().info('Chassis enabled successfully! Continuing to run.')
