@@ -1,29 +1,27 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
-from rclpy.qos import QoSProfile
-from time import time
+import time
 
 
 class CmdVelRelay(Node):
     def __init__(self):
         super().__init__('cmd_vel_relay')
-        qos = QoSProfile(depth=10)
-        self.publisher = self.create_publisher(Twist, '/cmd_vel_const', qos)
-        self.subscription = self.create_subscription(Twist, '/cmd_vel', self.cmd_vel_callback, qos)
-        self.timer = self.create_timer(0.01, self.publish_cmd_vel_const)  # 100 Hz
+        self.publisher = self.create_publisher(Twist, '/cmd_vel_const', 10)
+        self.subscription = self.create_subscription(Twist, '/cmd_vel', self.cmd_vel_callback, 10)
+        self.timer = self.create_timer(0.01, self.publish_loop)  # 100 Hz
 
         self.last_msg = Twist()
-        self.last_time = time()
+        self.last_msg_time = self.get_clock().now()
 
     def cmd_vel_callback(self, msg):
         self.last_msg = msg
-        self.last_time = time()
+        self.last_msg_time = self.get_clock().now()
 
-    def publish_cmd_vel_const(self):
-        if time() - self.last_time > 0.1:  # No msg in last 0.1s
-            zero = Twist()
-            self.publisher.publish(zero)
+    def publish_loop(self):
+        elapsed = (self.get_clock().now() - self.last_msg_time).nanoseconds * 1e-9
+        if elapsed > 0.1:
+            self.publisher.publish(Twist())  # Publish zero velocity
         else:
             self.publisher.publish(self.last_msg)
 
