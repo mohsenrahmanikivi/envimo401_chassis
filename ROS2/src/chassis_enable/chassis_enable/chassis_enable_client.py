@@ -21,7 +21,7 @@ class ChassisEnableClient(Node):
 
     def try_enable_chassis(self):
         if self.enabled:
-            # Already enabled, just keep running
+            # Already enabled, keep running
             return False
 
         elapsed = (self.get_clock().now() - self.start_time).nanoseconds * 1e-9
@@ -33,16 +33,30 @@ class ChassisEnableClient(Node):
         future = self.client.call_async(self.request)
         rclpy.spin_until_future_complete(self, future)
 
-        if future.result() is not None:
-            if getattr(future.result(), 'result', 0) == 1:
-                self.get_logger().info('Chassis enabled successfully! Continuing to run.')
-                self.enabled = True
-                return False  # Keep spinning
+        response = future.result()
+        if response is not None:
+            self.get_logger().info(f'Service response: {response}')
+            # Check for common response fields
+            if hasattr(response, 'result'):
+                if response.result == 1:
+                    self.get_logger().info('Chassis enabled successfully! Continuing to run.')
+                    self.enabled = True
+                    return False
+                else:
+                    self.get_logger().warn(f'Chassis enable command failed with result={response.result}, retrying...')
+            elif hasattr(response, 'success'):
+                if response.success:
+                    self.get_logger().info('Chassis enabled successfully! Continuing to run.')
+                    self.enabled = True
+                    return False
+                else:
+                    self.get_logger().warn('Chassis enable command failed (success=False), retrying...')
             else:
-                self.get_logger().warn(f'Chassis enable command failed with result={future.result().result}, retrying...')
+                self.get_logger().warn('Unknown service response structure, retrying...')
         else:
             self.get_logger().warn('Service call failed or no response, retrying...')
-        return False  # Keep spinning
+
+        return False  # Continue retrying
 
 def main(args=None):
     rclpy.init(args=args)
