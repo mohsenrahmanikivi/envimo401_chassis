@@ -2,17 +2,21 @@
 <package format="3">
   <name>chassis_enable</name>
   <version>0.1.0</version>
-  <description>Relay /cmd_vel and enable chassis via service call</description>
+  <description>Package for relaying cmd_vel, enabling the chassis, and launching assisted teleoperation behavior in Nav2</description>
 
   <maintainer email="your@email.com">Your Name</maintainer>
   <license>Apache-2.0</license>
 
+  <!-- Build tool -->
   <buildtool_depend>ament_python</buildtool_depend>
 
+  <!-- Run-time dependencies -->
   <exec_depend>rclpy</exec_depend>
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>segway_msgs</exec_depend>
+  <exec_depend>nav2_simple_commander</exec_depend>
 
+  <!-- Required for Python packages -->
   <export>
     <build_type>ament_python</build_type>
   </export>
