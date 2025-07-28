@@ -39,7 +39,7 @@ class ChassisEnableClient(Node):
             self.get_logger().info(f'Service response: {response}')
             # Check common response fields for success
             if hasattr(response, 'result'):
-                if response.result == 1:
+                if response.result == 0:
                     self.get_logger().info('Chassis enabled successfully! Continuing to run.')
                     self.enabled = True
                     return False
