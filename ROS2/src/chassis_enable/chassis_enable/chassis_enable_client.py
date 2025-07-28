@@ -81,11 +81,15 @@ def main(args=None):
             node.get_logger().error('❌ Chassis not enabled. Exiting.')
 
     except KeyboardInterrupt:
-        node.get_logger().info('🛑 Interrupted by user.')
+        # Avoid logging if rclpy already shutdown (might cause publisher invalid error)
+        if rclpy.ok():
+            node.get_logger().info('🛑 Interrupted by user.')
 
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        # Only shutdown if not already shutdown
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':
