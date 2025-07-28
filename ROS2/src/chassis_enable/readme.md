@@ -47,5 +47,5 @@ You can create your own launch file to start the nodes or run them individually:
 ```bash
 ros2 run chassis_enable cmd_vel_relay
 ros2 run chassis_enable chassis_enable_client
-ros2 run chassis_enable assisted_teleop_node
+ros2 run chassis_enable assisted_teleop
 
