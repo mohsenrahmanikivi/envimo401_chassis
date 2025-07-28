@@ -12,7 +12,7 @@ This package contains **three nodes**:
 
 A node that:
 - Subscribes to: `/cmd_vel`
-- Publishes to: `/cmd_vel_out`
+- Publishes to: `/cmd_vel_const`
 - **Behavior**:
   - Publishes velocity commands at a constant rate of **100 Hz**.
   - If no new `/cmd_vel` messages are received, it publishes **zero velocity**.
