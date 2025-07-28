@@ -7,49 +7,55 @@ import time
 class ChassisEnableClient(Node):
     def __init__(self):
         super().__init__('chassis_enable_client')
+
+        # Declare and create the service client
         self.client = self.create_client(RosSetChassisEnableCmd, '/set_chassis_enable')
 
-        self.get_logger().info('Waiting for /set_chassis_enable service...')
+        self.get_logger().info('🔌 Waiting for /set_chassis_enable service...')
         while not self.client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('Waiting for /set_chassis_enable service...')
+            self.get_logger().warn('⏳ Waiting for service...')
 
         # Prepare the request
         self.request = RosSetChassisEnableCmd.Request()
-        self.request.ros_set_chassis_enable_cmd = True
+        self.request.ros_set_chassis_enable_cmd = True  # Set the request field properly
 
-        # Retry settings
+        # Time-based retry control
         self.start_time = self.get_clock().now()
-        self.max_duration_sec = 12.0
+        self.max_duration_sec = 12.0  # Fail after 12 seconds
         self.retry_interval_sec = 3
         self.enabled = False
 
     def try_enable_chassis(self):
         if self.enabled:
-            return True  # Already enabled, nothing to do
+            return True  # Already done
 
+        # Compute elapsed time
         elapsed = (self.get_clock().now() - self.start_time).nanoseconds * 1e-9
         if elapsed > self.max_duration_sec:
-            self.get_logger().error(f'❌ Failed to enable chassis after {self.max_duration_sec} seconds. Exiting.')
-            return True  # Stop trying
+            self.get_logger().error(f'❌ Timeout after {self.max_duration_sec}s — failed to enable.')
+            return True  # Give up, exit
 
-        self.get_logger().info(f'🔄 Attempting to enable chassis (elapsed {elapsed:.2f}s)...')
+        self.get_logger().info(f'🔄 Attempting to enable chassis (elapsed {elapsed:.1f}s)...')
+
+        # Send async service call
         future = self.client.call_async(self.request)
         rclpy.spin_until_future_complete(self, future)
 
-        response = future.result()
-        if response is not None:
-            self.get_logger().info(f'📨 Service response: {response}')
-            # Correct field name
-            if hasattr(response, 'chassis_set_chassis_enable_result'):
-                if response.chassis_set_chassis_enable_result == 0:
-                    self.get_logger().info('✅ Chassis enabled successfully!')
-                    self.enabled = True
-                    return True  # Stop retrying
-                else:
-                    self.get_logger().warn(
-                        f'⚠️ Enable failed (result={response.chassis_set_chassis_enable_result}), retrying...')
+        if future.result() is not None:
+            response = future.result()
+
+            # Validate field existence (matches .srv file)
+            result = getattr(response, 'chassis_set_chassis_enable_result', None)
+            if result is None:
+                self.get_logger().error('❌ Response missing expected field.')
+                return True  # Unexpected error
+
+            if result == 0:
+                self.get_logger().info('✅ Chassis enabled successfully.')
+                self.enabled = True
+                return True  # Done
             else:
-                self.get_logger().warn('⚠️ Unknown response structure, retrying...')
+                self.get_logger().warn(f'⚠️ Chassis enable failed with result={result}, retrying...')
         else:
             self.get_logger().warn('⚠️ No response from service, retrying...')
 
@@ -61,13 +67,22 @@ def main(args=None):
     node = ChassisEnableClient()
 
     try:
+        # Retry until success or timeout
         while rclpy.ok():
-            stop = node.try_enable_chassis()
-            if stop:
+            done = node.try_enable_chassis()
+            if done:
                 break
             time.sleep(node.retry_interval_sec)
+
+        if node.enabled:
+            node.get_logger().info('🚗 Spinning — chassis enabled and running.')
+            rclpy.spin(node)  # Stay alive
+        else:
+            node.get_logger().error('❌ Chassis not enabled. Exiting.')
+
     except KeyboardInterrupt:
-        node.get_logger().info('🛑 Chassis enable client interrupted by user.')
+        node.get_logger().info('🛑 Interrupted by user.')
+
     finally:
         node.destroy_node()
         rclpy.shutdown()
