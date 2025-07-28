@@ -27,7 +27,10 @@ def main(args=None):
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
-        node.get_logger().info('Assisted Teleop Node stopped by user.')
+        if rclpy.ok():
+            node.get_logger().info('Assisted Teleop Node stopped by user.')
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
+
