@@ -1,4 +1,4 @@
-hi## Modified Package to be Compatible with Humble
+## Modified Package to be Compatible with Humble
 These is the ROS1 and ROS2 packages for Segway chassis 100, 200, and 400 series.
 
 ## ROS2 hints
