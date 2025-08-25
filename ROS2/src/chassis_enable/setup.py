@@ -19,9 +19,9 @@ setup(
     license='Apache-2.0',
     entry_points={
         'console_scripts': [
-            'cmd_vel_relay = chassis_enable.cmd_vel_relay_node:main',
+            'cmd_vel_relay = chassis_enable.cmd_vel_relay:main',
             'chassis_enable_client = chassis_enable.chassis_enable_client:main',
-            'assisted_teleop = chassis_enable.assisted_teleop_node:main',
+            'assisted_teleop = chassis_enable.assisted_teleop:main',
         ],
     },
 )
