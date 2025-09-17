@@ -5,7 +5,7 @@ from nav2_simple_commander.robot_navigator import BasicNavigator
 
 class AssistedTeleopNode(Node):
     def __init__(self):
-        super().__init__('assisted_teleop_node')
+        super().__init__('assisted_teleop')
         self.get_logger().info('Starting Assisted Teleop Node (lifetime mode)...')
 
         # Initialize navigator and wait for Nav2 stack to be active
