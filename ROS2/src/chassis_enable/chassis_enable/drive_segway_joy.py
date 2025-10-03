@@ -182,8 +182,8 @@ class DriveSegwayJoy(Node):
             if self.debug_joy:
                 self.get_logger().info(f'Using D-PAD from buttons: y={dpad_y}, x={dpad_x}')
 
-        if dpad_x == 1: desired.angular.z += 0.1
-        elif dpad_x == -1: desired.angular.z -= 0.1
+        if dpad_x == 1: desired.angular.z -= 0.1
+        elif dpad_x == -1: desired.angular.z += 0.1
         if dpad_y == 1: desired.linear.x += 0.1
         elif dpad_y == -1: desired.linear.x -= 0.1
 
