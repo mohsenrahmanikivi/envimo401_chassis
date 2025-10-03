@@ -3,8 +3,8 @@
 drive_segway_joy.py - robust D-pad & bumper handling + manual R2/L2
 
 Behavior implemented:
- - Axis 0 (Left stick horizontal): angular velocity [-max..+max], deadzone applied
- - Axis 1 unused for linear (triggers control linear)
+ - Axis 0 (Left stick horizontal): angular velocity [-max..+max], deadzone applied (inverted to correct direction)
+ - Axis 3 (Right stick vertical): linear velocity [-max/2..+max/2], deadzone applied
  - D-pad left/right: fixed angular ±0.1 (handles both button-style and hat-axis-style D-pad)
  - D-pad up/down: fixed linear ±0.1
  - R1 (button 5 or fallback 6): fixed linear +0.1
@@ -105,10 +105,6 @@ class DriveSegwayJoy(Node):
         return frac
 
     def _dpad_from_buttons(self, buttons: List[int]) -> Tuple[int,int]:
-        """
-        Return (up/down, left/right) as integers in {-1,0,1}.
-        Buttons mapping (common): up=12, down=13, left=14, right=15
-        """
         up = down = left = right = 0
         if len(buttons) > 12:
             up = 1 if buttons[12] == 1 else 0
@@ -121,12 +117,6 @@ class DriveSegwayJoy(Node):
         return (0, 0)
 
     def _dpad_from_hat_axes(self, axes: List[float]) -> Tuple[int,int]:
-        """
-        If your controller presents D-pad as hat axes, those axes typically return:
-        -1, 0, +1 for left/center/right or up/center/down.
-        Parameters dpad_hat_x/dpad_hat_y are set to axis indices (or -1).
-        Returns (y, x) ints in {-1,0,1}.
-        """
         x = 0; y = 0
         if 0 <= self.dpad_hat_x < len(axes):
             try:
@@ -138,7 +128,6 @@ class DriveSegwayJoy(Node):
         if 0 <= self.dpad_hat_y < len(axes):
             try:
                 ay = float(axes[self.dpad_hat_y])
-                # note: some drivers use -1 for up; we treat signs symmetrically
                 if ay > 0.5: y = 1
                 elif ay < -0.5: y = -1
             except Exception:
@@ -146,15 +135,10 @@ class DriveSegwayJoy(Node):
         return (y, x)
 
     def _bumpers_from_buttons(self, buttons: List[int]) -> Tuple[bool,bool]:
-        """
-        Return (r1_pressed, l1_pressed).
-        We check common mappings: R1=5, L1=4, and fallback pair (6,7).
-        """
         r1 = False; l1 = False
         if len(buttons) > 5:
             r1 = buttons[5] == 1
             l1 = buttons[4] == 1
-        # fallback try (6,7)
         if not (r1 or l1):
             if len(buttons) > 7:
                 r1 = buttons[7] == 1 or r1
@@ -165,14 +149,13 @@ class DriveSegwayJoy(Node):
         axes = list(msg.axes) if msg.axes is not None else []
         buttons = list(msg.buttons) if msg.buttons is not None else []
 
-        # debug raw frames when they change
+        # debug raw frames
         if self.debug_joy:
             if self._last_axes is None or axes != self._last_axes:
                 self.get_logger().info(f'JOY received axes(len={len(axes)}): {axes}')
                 self.get_logger().info(f'JOY received buttons(len={len(buttons)}): {buttons}')
                 self._last_axes = list(axes)
 
-        # ensure last_buttons initialised
         if not self.last_buttons:
             self.last_buttons = [0] * len(buttons)
 
@@ -181,9 +164,14 @@ class DriveSegwayJoy(Node):
         # --- ANGULAR from left stick horizontal (axis 0) ---
         if len(axes) > 0:
             raw_ang = apply_deadzone(axes[0], self.deadzone)
-            desired.angular.z = float(raw_ang) * self.max_ang
+            desired.angular.z = -float(raw_ang) * self.max_ang   # FIX: invert sign
 
-        # --- DPAD: try hat axes first (if configured), else buttons ---
+        # --- RIGHT STICK VERTICAL (axis 3) -> linear contribution ---
+        if len(axes) > 3:
+            raw_lin = apply_deadzone(-axes[3], self.deadzone)  # invert so up = forward
+            desired.linear.x += raw_lin * (self.max_lin / 2.0)
+
+        # --- DPAD ---
         dpad_y, dpad_x = 0, 0
         if 0 <= self.dpad_hat_x < len(axes) or 0 <= self.dpad_hat_y < len(axes):
             dpad_y, dpad_x = self._dpad_from_hat_axes(axes)
@@ -194,29 +182,19 @@ class DriveSegwayJoy(Node):
             if self.debug_joy:
                 self.get_logger().info(f'Using D-PAD from buttons: y={dpad_y}, x={dpad_x}')
 
-        # D-pad left/right -> angular increments
-        if dpad_x == 1:
-            desired.angular.z += 0.1
-        elif dpad_x == -1:
-            desired.angular.z -= 0.1
+        if dpad_x == 1: desired.angular.z += 0.1
+        elif dpad_x == -1: desired.angular.z -= 0.1
+        if dpad_y == 1: desired.linear.x += 0.1
+        elif dpad_y == -1: desired.linear.x -= 0.1
 
-        # D-pad up/down -> fixed linear increments
-        if dpad_y == 1:
-            desired.linear.x += 0.1
-        elif dpad_y == -1:
-            desired.linear.x -= 0.1
-
-        # --- BUMPERS R1/L1 fixed increments ---
+        # --- BUMPERS ---
         r1, l1 = self._bumpers_from_buttons(buttons)
         if self.debug_joy:
             self.get_logger().info(f'BUMPERS read: R1={r1}, L1={l1}')
+        if r1: desired.linear.x += 0.1
+        if l1: desired.linear.x -= 0.1
 
-        if r1:
-            desired.linear.x += 0.1
-        if l1:
-            desired.linear.x -= 0.1
-
-        # --- TRIGGERS (manual axes) ---
+        # --- TRIGGERS ---
         fwd = 0.0; bwd = 0.0
         if self.trigger_mode == 'manual':
             if 0 <= self.r2_axis < len(axes):
@@ -232,19 +210,16 @@ class DriveSegwayJoy(Node):
             else:
                 l_frac = 0.0
 
-            # debug triggers
             if self.debug_joy and (time.time() - self._last_debug_time) > 0.2:
-                self.get_logger().info(f'TRIGGERS read: r_idx={self.r2_axis} r_val={r_val if 0<=self.r2_axis<len(axes) else "N/A"} r_frac={r_frac:.3f} -> fwd={fwd:.3f}; '
-                                       f'l_idx={self.l2_axis} l_val={l_val if 0<=self.l2_axis<len(axes) else "N/A"} l_frac={l_frac:.3f} -> bwd={bwd:.3f}')
+                self.get_logger().info(
+                    f'TRIGGERS read: r_idx={self.r2_axis} r_val={r_val if 0<=self.r2_axis<len(axes) else "N/A"} r_frac={r_frac:.3f} -> fwd={fwd:.3f}; '
+                    f'l_idx={self.l2_axis} l_val={l_val if 0<=self.l2_axis<len(axes) else "N/A"} l_frac={l_frac:.3f} -> bwd={bwd:.3f}'
+                )
                 self._last_debug_time = time.time()
-        else:
-            # simple safe default: no triggers if not manual
-            pass
 
-        # Triggers add to linear (forward positive, backward negative)
         desired.linear.x += (fwd - bwd)
 
-        # clamp linear and angular before smoothing
+        # clamp
         desired.linear.x = max(min(desired.linear.x, self.max_lin), -self.max_lin)
         desired.angular.z = max(min(desired.angular.z, self.max_ang), -self.max_ang)
 
@@ -255,12 +230,11 @@ class DriveSegwayJoy(Node):
         smoothed.angular.z = a * desired.angular.z + (1.0 - a) * float(self.prev_twist.angular.z)
         self.prev_twist = smoothed
 
-        # publish and debug-publish
         self.cmd_pub.publish(smoothed)
         if self.debug_joy:
             self.get_logger().info(f'PUBLISH cmd_vel linear={smoothed.linear.x:.3f} ang={smoothed.angular.z:.3f}')
 
-        # enable/disable rising-edge detection
+        # enable/disable service calls
         if len(buttons) != len(self.last_buttons):
             self.last_buttons = [0] * len(buttons)
         if len(buttons) > 0 and buttons[0] == 1 and self.last_buttons[0] == 0:
