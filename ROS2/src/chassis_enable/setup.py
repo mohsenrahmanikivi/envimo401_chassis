@@ -22,7 +22,7 @@ setup(
             'cmd_vel_relay = chassis_enable.cmd_vel_relay:main',
             'chassis_enable_client = chassis_enable.chassis_enable_client:main',
             'assisted_teleop = chassis_enable.assisted_teleop:main',
-            'drive_segway_joy = your_package_name.drive_segway_joy:main'
+            'drive_segway_joy = chassis_enable.drive_segway_joy:main'
         ],
     },
 )
