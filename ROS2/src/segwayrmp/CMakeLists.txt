@@ -35,11 +35,11 @@ find_package(rclcpp_components REQUIRED)
 message("-- Segway Robtics Notice: This external lib and include path can be changed by users.")
 
 #This setting can be changed by users.
-set(EXTERNAL_INCLUDE_PATH ${CMAKE_SOURCE_DIR}/../LibAPI/include)
+set(EXTERNAL_INCLUDE_PATH ${CMAKE_SOURCE_DIR}/../../../LibAPI/include)
 message("-- Segway Robtics Notice: The external inlude path is " ${EXTERNAL_INCLUDE_PATH})
 
 #This setting can be changed by users.
-set(EXTERNAL_LIB_PATH ${CMAKE_SOURCE_DIR}/../LibAPI/lib)
+set(EXTERNAL_LIB_PATH ${CMAKE_SOURCE_DIR}/../../../LibAPI/lib)
 message("-- Segway Robtics Notice: The external lib path is " ${EXTERNAL_LIB_PATH})
 
 
