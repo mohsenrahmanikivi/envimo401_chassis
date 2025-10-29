@@ -26,40 +26,35 @@ find_package(rosidl_default_generators REQUIRED)
 find_package(action_msgs REQUIRED)
 
 set(msg_files
-  "msg/bms_fb.msg"
-  "msg/chassis_ctrl_src_fb.msg"
-  "msg/chassis_mileage_meter_fb.msg"
-  "msg/chassis_mode_fb.msg"
-  "msg/error_code_fb.msg"
-  "msg/front_axle_angle_fb.msg"
-  "msg/motor_work_mode_fb.msg"
-  "msg/speed_fb.msg"
-  "msg/ticks_fb.msg"
+  "msg/BmsFb.msg"
+  "msg/ChassisCtrlSrcFb.msg"
+  "msg/ChassisMileageMeterFb.msg"
+  "msg/ChassisModeFb.msg"
+  "msg/ErrorCodeFb.msg"
+  "msg/MotorWorkModeFb.msg"
+  "msg/SpeedFb.msg"
+  "msg/TicksFb.msg"
 )
 
 set(srv_files
-  "srv/ros_stop_chassis_rotate_cmd.srv"
-  "srv/ros_start_chassis_right_rotate_cmd.srv"
-  "srv/ros_start_chassis_left_rotate_cmd.srv"
-  "srv/ros_set_vel_max_cmd.srv"
-  "srv/ros_set_load_param_cmd.srv"
-  "srv/ros_set_chassis_poweroff_cmd.srv"
-  "srv/ros_set_chassis_buzzer_cmd.srv"
-  "srv/ros_set_cfg_rotate_function_cmd.srv"
-  "srv/ros_reset_host_power_cmd.srv"
-  "srv/ros_get_vel_max_feedback_cmd.srv"
-  "srv/ros_get_sw_version_cmd.srv"
-  "srv/ros_get_rotate_function_cfg_cmd.srv"
-  "srv/ros_get_load_param_cmd.srv"
-  "srv/ros_get_host_and_chassis_match_cmd.srv"
-  "srv/ros_get_chassis_SN_cmd.srv"
-  "srv/ros_get_chassis_rotate_switch_cmd.srv"
-  "srv/ros_enable_chassis_rotate_cmd.srv"
-  "srv/ros_clear_chassis_error_code_cmd.srv"
+  "srv/ChassisSendEvent.srv"
+  "srv/RosGetChargeMosCtrlStatusCmd.srv"
+  "srv/RosGetLoadParamCmd.srv"
+  "srv/RosGetSwVersionCmd.srv"
+  "srv/RosGetVelMaxFeedbackCmd.srv"
+  "srv/RosSetChargeMosCtrlCmd.srv"
+  "srv/RosSetChassisEnableCmd.srv"
+  "srv/RosSetChassisPoweroffCmd.srv"
+  "srv/RosSetLoadParamCmd.srv"
+  "srv/RosSetRemovePushCmd.srv"
+  "srv/RosSetVelMaxCmd.srv"
+  "srv/RosSetChassisCalibImuCmd.srv"
+  "srv/RosGetLowPowerShutdownThresholdCmd.srv"
+  "srv/RosSetLowPowerShutdownThresholdCmd.srv"
 )
 
 set(action_files
-  "action/ros_set_iap_cmd.action"
+  "action/RosSetIapCmd.action"
 )
 rosidl_generate_interfaces(${PROJECT_NAME} 
   ${msg_files} 
