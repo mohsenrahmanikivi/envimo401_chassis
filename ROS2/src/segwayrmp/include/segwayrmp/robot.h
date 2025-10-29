@@ -43,6 +43,20 @@
 #include "segway_msgs/srv/ros_get_low_power_shutdown_threshold_cmd.hpp"
 #include "segway_msgs/srv/ros_set_low_power_shutdown_threshold_cmd.hpp"
 #include "segway_msgs/action/ros_set_iap_cmd.hpp"
+// --- ADD THESE IN robot.h alongside existing segway_msgs includes ---
+#include "segway_msgs/srv/ros_clear_chassis_error_code_cmd.hpp"
+#include "segway_msgs/srv/ros_enable_chassis_rotate_cmd.hpp"
+#include "segway_msgs/srv/ros_get_chassis_rotate_switch_cmd.hpp"
+#include "segway_msgs/srv/ros_get_chassis_sn_cmd.hpp"
+#include "segway_msgs/srv/ros_get_host_and_chassis_match_cmd.hpp"
+#include "segway_msgs/srv/ros_get_rotate_function_cfg_cmd.hpp"
+#include "segway_msgs/srv/ros_reset_host_power_cmd.hpp"
+#include "segway_msgs/srv/ros_set_cfg_rotate_function_cmd.hpp"
+#include "segway_msgs/srv/ros_set_chassis_buzzer_cmd.hpp"
+#include "segway_msgs/srv/ros_start_chassis_left_rotate_cmd.hpp"
+#include "segway_msgs/srv/ros_start_chassis_right_rotate_cmd.hpp"
+#include "segway_msgs/srv/ros_stop_chassis_rotate_cmd.hpp"
+// --- ---
 
 #define pi   3.141592654
 #define pi_2 6.283185308
@@ -105,7 +119,46 @@ namespace robot
             rclcpp::Service<segway_msgs::srv::RosSetVelMaxCmd>::SharedPtr ros_set_vel_max_cmd_server;
             rclcpp::Service<segway_msgs::srv::RosGetLowPowerShutdownThresholdCmd>::SharedPtr ros_get_low_power_shutdown_threshold_cmd_server;
             rclcpp::Service<segway_msgs::srv::RosSetLowPowerShutdownThresholdCmd>::SharedPtr ros_set_low_power_shutdown_threshold_cmd_server;
-
+            
+            // --- ADD THESE in the same member area in robot.h ---
+            rclcpp::Service<segway_msgs::srv::RosClearChassisErrorCodeCmd>::SharedPtr ros_clear_chassis_error_code_cmd_server;
+            rclcpp::Service<segway_msgs::srv::RosEnableChassisRotateCmd>::SharedPtr ros_enable_chassis_rotate_cmd_server;
+            rclcpp::Service<segway_msgs::srv::RosGetChassisRotateSwitchCmd>::SharedPtr ros_get_chassis_rotate_switch_cmd_server;
+            rclcpp::Service<segway_msgs::srv::RosGetChassisSNCmd>::SharedPtr ros_get_chassis_sn_cmd_server;
+            rclcpp::Service<segway_msgs::srv::RosGetHostAndChassisMatchCmd>::SharedPtr ros_get_host_and_chassis_match_cmd_server;
+            rclcpp::Service<segway_msgs::srv::RosGetRotateFunctionCfgCmd>::SharedPtr ros_get_rotate_function_cfg_cmd_server;
+            rclcpp::Service<segway_msgs::srv::RosResetHostPowerCmd>::SharedPtr ros_reset_host_power_cmd_server;
+            rclcpp::Service<segway_msgs::srv::RosSetCfgRotateFunctionCmd>::SharedPtr ros_set_cfg_rotate_function_cmd_server;
+            rclcpp::Service<segway_msgs::srv::RosSetChassisBuzzerCmd>::SharedPtr ros_set_chassis_buzzer_cmd_server;
+            rclcpp::Service<segway_msgs::srv::RosStartChassisLeftRotateCmd>::SharedPtr ros_start_chassis_left_rotate_cmd_server;
+            rclcpp::Service<segway_msgs::srv::RosStartChassisRightRotateCmd>::SharedPtr ros_start_chassis_right_rotate_cmd_server;
+            rclcpp::Service<segway_msgs::srv::RosStopChassisRotateCmd>::SharedPtr ros_stop_chassis_rotate_cmd_server;
+            // callback prototypes:
+            void ros_clear_chassis_error_code_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosClearChassisErrorCodeCmd::Request> request,
+                std::shared_ptr<segway_msgs::srv::RosClearChassisErrorCodeCmd::Response> response);
+            void ros_enable_chassis_rotate_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosEnableChassisRotateCmd::Request> request,
+                std::shared_ptr<segway_msgs::srv::RosEnableChassisRotateCmd::Response> response);
+            void ros_get_chassis_rotate_switch_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetChassisRotateSwitchCmd::Request> request,
+                std::shared_ptr<segway_msgs::srv::RosGetChassisRotateSwitchCmd::Response> response);
+            void ros_get_chassis_sn_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetChassisSNCmd::Request> request,
+                std::shared_ptr<segway_msgs::srv::RosGetChassisSNCmd::Response> response);
+            void ros_get_host_and_chassis_match_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetHostAndChassisMatchCmd::Request> request,
+                std::shared_ptr<segway_msgs::srv::RosGetHostAndChassisMatchCmd::Response> response);
+            void ros_get_rotate_function_cfg_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetRotateFunctionCfgCmd::Request> request,
+                std::shared_ptr<segway_msgs::srv::RosGetRotateFunctionCfgCmd::Response> response);
+            void ros_reset_host_power_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosResetHostPowerCmd::Request> request,
+                std::shared_ptr<segway_msgs::srv::RosResetHostPowerCmd::Response> response);
+            void ros_set_cfg_rotate_function_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetCfgRotateFunctionCmd::Request> request,
+                std::shared_ptr<segway_msgs::srv::RosSetCfgRotateFunctionCmd::Response> response);
+            void ros_set_chassis_buzzer_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetChassisBuzzerCmd::Request> request,
+                std::shared_ptr<segway_msgs::srv::RosSetChassisBuzzerCmd::Response> response);
+            void ros_start_chassis_left_rotate_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosStartChassisLeftRotateCmd::Request> request,
+                std::shared_ptr<segway_msgs::srv::RosStartChassisLeftRotateCmd::Response> response);
+            void ros_start_chassis_right_rotate_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosStartChassisRightRotateCmd::Request> request,
+                std::shared_ptr<segway_msgs::srv::RosStartChassisRightRotateCmd::Response> response);
+            void ros_stop_chassis_rotate_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosStopChassisRotateCmd::Request> request,
+                std::shared_ptr<segway_msgs::srv::RosStopChassisRotateCmd::Response> response);
+            // --- ---
             void ros_get_charge_mos_ctrl_status_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetChargeMosCtrlStatusCmd::Request> request,
                 std::shared_ptr<segway_msgs::srv::RosGetChargeMosCtrlStatusCmd::Response> response);
             void ros_get_load_param_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetLoadParamCmd::Request> request,

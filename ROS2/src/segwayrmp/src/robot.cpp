@@ -140,6 +140,22 @@ Chassis::Chassis(rclcpp::Node::SharedPtr nh) : node(nh)
     ros_set_low_power_shutdown_threshold_cmd_server = node->create_service<segway_msgs::srv::RosSetLowPowerShutdownThresholdCmd>(
        "ros_set_low_power_shutdown_threshold", std::bind(&Chassis::ros_set_low_power_shutdown_threshold_cmd_callback, this, _1, _2));
 
+       // --- ADD THESE create_service registrations inside Chassis::Chassis(...) ---
+    ros_clear_chassis_error_code_cmd_server = node->create_service<segway_msgs::srv::RosClearChassisErrorCodeCmd>("clear_chassis_error_code", std::bind(&Chassis::ros_clear_chassis_error_code_cmd_callback, this, _1, _2));
+    ros_enable_chassis_rotate_cmd_server = node->create_service<segway_msgs::srv::RosEnableChassisRotateCmd>("enable_chassis_rotate", std::bind(&Chassis::ros_enable_chassis_rotate_cmd_callback, this, _1, _2));
+    ros_get_chassis_rotate_switch_cmd_server = node->create_service<segway_msgs::srv::RosGetChassisRotateSwitchCmd>("get_chassis_rotate_switch", std::bind(&Chassis::ros_get_chassis_rotate_switch_cmd_callback, this, _1, _2));
+    ros_get_chassis_sn_cmd_server = node->create_service<segway_msgs::srv::RosGetChassisSNCmd>("get_chassis_sn", std::bind(&Chassis::ros_get_chassis_sn_cmd_callback, this, _1, _2));
+    ros_get_host_and_chassis_match_cmd_server = node->create_service<segway_msgs::srv::RosGetHostAndChassisMatchCmd>("get_host_and_chassis_match", std::bind(&Chassis::ros_get_host_and_chassis_match_cmd_callback, this, _1, _2));
+    ros_get_rotate_function_cfg_cmd_server = node->create_service<segway_msgs::srv::RosGetRotateFunctionCfgCmd>("get_rotate_function_cfg", std::bind(&Chassis::ros_get_rotate_function_cfg_cmd_callback, this, _1, _2));
+    ros_reset_host_power_cmd_server = node->create_service<segway_msgs::srv::RosResetHostPowerCmd>("reset_host_power", std::bind(&Chassis::ros_reset_host_power_cmd_callback, this, _1, _2));
+    ros_set_cfg_rotate_function_cmd_server = node->create_service<segway_msgs::srv::RosSetCfgRotateFunctionCmd>("set_cfg_rotate_function", std::bind(&Chassis::ros_set_cfg_rotate_function_cmd_callback, this, _1, _2));
+    ros_set_chassis_buzzer_cmd_server = node->create_service<segway_msgs::srv::RosSetChassisBuzzerCmd>("set_chassis_buzzer", std::bind(&Chassis::ros_set_chassis_buzzer_cmd_callback, this, _1, _2));
+    ros_start_chassis_left_rotate_cmd_server = node->create_service<segway_msgs::srv::RosStartChassisLeftRotateCmd>("start_chassis_left_rotate", std::bind(&Chassis::ros_start_chassis_left_rotate_cmd_callback, this, _1, _2));
+    ros_start_chassis_right_rotate_cmd_server = node->create_service<segway_msgs::srv::RosStartChassisRightRotateCmd>("start_chassis_right_rotate", std::bind(&Chassis::ros_start_chassis_right_rotate_cmd_callback, this, _1, _2));
+    ros_stop_chassis_rotate_cmd_server = node->create_service<segway_msgs::srv::RosStopChassisRotateCmd>("stop_chassis_rotate", std::bind(&Chassis::ros_stop_chassis_rotate_cmd_callback, this, _1, _2));
+        //---
+
+
     velocity_sub = node->create_subscription<geometry_msgs::msg::Twist>(
         "cmd_vel", 1, std::bind(&Chassis::cmd_vel_callback, this, std::placeholders::_1));
 
@@ -314,6 +330,152 @@ void Chassis::ros_set_low_power_shutdown_threshold_cmd_callback(const std::share
     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "request->ros_set_low_power_shutdown_threshold: [%d]", request->ros_set_low_power_shutdown_threshold);
     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "response->chassis_set_soc_threshold_result:%d[0:success; -1:fail to send cmd; -2:fail to calib; -3: overtime] ", threshold_ret);
 }
+
+
+// --- ADD THESE definitions to src/robot.cpp (next to other ros_xxx_cmd_callback implementations) ---
+void Chassis::ros_clear_chassis_error_code_cmd_callback(  
+    const std::shared_ptr<segway_msgs::srv::RosClearChassisErrorCodeCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosClearChassisErrorCodeCmd::Response> response)
+{
+    (void)request;
+    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_clear_chassis_error_code_cmd_callback called");
+
+    // TODO: Replace the following stub with actual LibAPI call if available.
+    // lib function to clear chassis error code not found in included headers; returning failure(1).
+    response->clear_chassis_error_code_result = 1; // 0=success? (depends on your API). Adjust as needed.
+    RCLCPP_WARN(rclcpp::get_logger("SmartCar"), "clear_chassis_error_code: stub – implement actual API call");
+}
+
+void Chassis::ros_enable_chassis_rotate_cmd_callback(
+    const std::shared_ptr<segway_msgs::srv::RosEnableChassisRotateCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosEnableChassisRotateCmd::Response> response)
+{
+    int16_t ret = -1;
+    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_enable_chassis_rotate_cmd_callback called enable=%d", request->ros_enable_chassis_rotate_cmd ? 1 : 0);
+
+    // TODO: call actual API to enable rotate if present. For now return not-implemented code.
+    response->chassis_enable_rotate_result = ret;
+    RCLCPP_WARN(rclcpp::get_logger("SmartCar"), "enable_chassis_rotate: stub – implement actual API call");
+}
+
+void Chassis::ros_get_chassis_rotate_switch_cmd_callback(
+    const std::shared_ptr<segway_msgs::srv::RosGetChassisRotateSwitchCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosGetChassisRotateSwitchCmd::Response> response)
+{
+    (void)request;
+    // 1: can rotate; others: no
+    uint8_t state = 0;
+    // TODO: if you have a low-level function to read rotate capability, call it here and set `state`.
+    response->chassis_rotate_state = state;
+    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "get_chassis_rotate_switch: returning %u (0 = unknown)", state);
+    if (state == 0) RCLCPP_WARN(rclcpp::get_logger("SmartCar"), "rotate switch: stub – implement actual API call");
+}
+
+void Chassis::ros_get_chassis_sn_cmd_callback(
+    const std::shared_ptr<segway_msgs::srv::RosGetChassisSNCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosGetChassisSNCmd::Response> response)
+{
+    (void)request;
+    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_get_chassis_sn_cmd_callback called");
+
+    // Use LibAPI: get_smart_car_serial() exists in LibAPI headers included in the repo.
+    char *sn_c = get_smart_car_serial(); // declared in comm_ctrl.h
+    if (sn_c) {
+        response->chassis_sn = std::string(sn_c);
+        RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "chassis_sn: %s", sn_c);
+    } else {
+        response->chassis_sn = std::string("");
+        RCLCPP_WARN(rclcpp::get_logger("SmartCar"), "get_chassis_sn: serial string is NULL");
+    }
+}
+
+void Chassis::ros_get_host_and_chassis_match_cmd_callback(
+    const std::shared_ptr<segway_msgs::srv::RosGetHostAndChassisMatchCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosGetHostAndChassisMatchCmd::Response> response)
+{
+    (void)request;
+    // TODO: implement with the appropriate LibAPI function when you have it.
+    response->host_and_chassis_match = 0; // 1 = match ? adjust to your API
+    RCLCPP_WARN(rclcpp::get_logger("SmartCar"), "get_host_and_chassis_match: stub – implement actual API call");
+}
+
+void Chassis::ros_get_rotate_function_cfg_cmd_callback(
+    const std::shared_ptr<segway_msgs::srv::RosGetRotateFunctionCfgCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosGetRotateFunctionCfgCmd::Response> response)
+{
+    (void)request;
+    // TODO: implement with the appropriate LibAPI function when you have it.
+    response->rotate_function_cfg = 0; // placeholder
+    RCLCPP_WARN(rclcpp::get_logger("SmartCar"), "get_rotate_function_cfg: stub – implement actual API call");
+}
+
+void Chassis::ros_reset_host_power_cmd_callback(
+    const std::shared_ptr<segway_msgs::srv::RosResetHostPowerCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosResetHostPowerCmd::Response> response)
+{
+    (void)request;
+    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_reset_host_power_cmd_callback called");
+
+    // TODO: call appropriate lib function to reset host power if available.
+    response->reset_host_power_result = 1; // 0 = success? adjust to your API
+    RCLCPP_WARN(rclcpp::get_logger("SmartCar"), "reset_host_power: stub – implement actual API call");
+}
+
+void Chassis::ros_set_cfg_rotate_function_cmd_callback(
+    const std::shared_ptr<segway_msgs::srv::RosSetCfgRotateFunctionCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosSetCfgRotateFunctionCmd::Response> response)
+{
+    (void)request;
+    // TODO: apply config to chassis rotate function if API exists
+    response->set_cfg_rotate_function_result = 1; // placeholder
+    RCLCPP_WARN(rclcpp::get_logger("SmartCar"), "set_cfg_rotate_function: stub – implement actual API call");
+}
+
+void Chassis::ros_set_chassis_buzzer_cmd_callback(
+    const std::shared_ptr<segway_msgs::srv::RosSetChassisBuzzerCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosSetChassisBuzzerCmd::Response> response)
+{
+    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_set_chassis_buzzer_cmd_callback called with %u", request->ros_set_chassis_buzzer_cmd);
+    // call lib function: set_buzzer_work_status(uint16_t buzzerSet)
+    uint16_t buz = (uint16_t)request->ros_set_chassis_buzzer_cmd;
+    uint8_t ret = set_buzzer_work_status(buz); // function available in LibAPI include
+    response->set_buzzer_result = ret;
+    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "set_buzzer_work_status returned %u", ret);
+}
+
+void Chassis::ros_start_chassis_left_rotate_cmd_callback(
+    const std::shared_ptr<segway_msgs::srv::RosStartChassisLeftRotateCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosStartChassisLeftRotateCmd::Response> response)
+{
+    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_start_chassis_left_rotate_cmd_callback called, ang_vel=%f", request->ros_start_chassis_left_rotate_cmd);
+
+    // TODO: call the proper function to start the chassis rotating left in place
+    response->chassis_left_rotate_result = -1; // stub: not implemented
+    RCLCPP_WARN(rclcpp::get_logger("SmartCar"), "start_chassis_left_rotate: stub – implement actual API call");
+}
+
+void Chassis::ros_start_chassis_right_rotate_cmd_callback(
+    const std::shared_ptr<segway_msgs::srv::RosStartChassisRightRotateCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosStartChassisRightRotateCmd::Response> response)
+{
+    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_start_chassis_right_rotate_cmd_callback called, ang_vel=%f", request->ros_start_chassis_right_rotate_cmd);
+
+    // TODO: call the proper function to start the chassis rotating right in place
+    response->chassis_right_rotate_result = -1; // stub: not implemented
+    RCLCPP_WARN(rclcpp::get_logger("SmartCar"), "start_chassis_right_rotate: stub – implement actual API call");
+}
+
+void Chassis::ros_stop_chassis_rotate_cmd_callback(
+    const std::shared_ptr<segway_msgs::srv::RosStopChassisRotateCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosStopChassisRotateCmd::Response> response)
+{
+    (void)request;
+    // TODO: call the stop-rotate API if available. For now, return placeholder.
+    // Note: the srv does not have a response field in the .srv file (commented out), so no response assignment here.
+    RCLCPP_WARN(rclcpp::get_logger("SmartCar"), "stop_chassis_rotate: stub – implement actual API call");
+}
+
+
 
 void Chassis::iapCmdExecute(const std::shared_ptr<goalHandaleIapCmd> goal_handle)
 {
