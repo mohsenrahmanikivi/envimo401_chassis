@@ -294,8 +294,9 @@ void Chassis::ros_set_vel_max_cmd_callback(const std::shared_ptr<segway_msgs::sr
     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "set_line_forward_max_vel result[%d], set_line_backward_max_vel result[%d], set_angular_max_vel result[%d]", 
         ret_forw, ret_back, ret_angl);
 }
-void Chassis::ros_get_low_power_shutdown_threshold_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetLowPowerShutdownThresholdCmd::Request> request,
-    std::shared_ptr<segway_msgs::srv::RosGetLowPowerShutdownThresholdCmd::Response> response)
+void Chassis::ros_get_low_power_shutdown_threshold_cmd_callback(
+  const std::shared_ptr<segway_msgs::srv::RosGetLowPowerShutdownThresholdCmd::Request>,
+  std::shared_ptr<segway_msgs::srv::RosGetLowPowerShutdownThresholdCmd::Response> response)
 {
     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "request: [%d]", request);  //no used
     
