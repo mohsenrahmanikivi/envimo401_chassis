@@ -442,6 +442,92 @@ void Chassis::ros_stop_chassis_rotate_cmd_callback(
                 "stop_chassis_rotate: placeholder (no response fields) - implement LibAPI stop if available");
 }
 
+// -------------------------------
+void Chassis::ros_clear_chassis_error_code_cmd_callback(
+    const std::shared_ptr<segway_msgs::srv::RosClearChassisErrorCodeCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosClearChassisErrorCodeCmd::Response> response)
+{
+    (void)request;
+    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_clear_chassis_error_code_cmd_callback called");
+    // .srv defines:
+    // request: bool clear_chassis_error_code_cmd
+    // response: uint8 clear_chassis_error_code_result
+    // Placeholder: not implemented, return non-zero to indicate not-successful/unused.
+    response->clear_chassis_error_code_result = static_cast<uint8_t>(1);
+    RCLCPP_WARN(rclcpp::get_logger("SmartCar"),
+                "clear_chassis_error_code: placeholder executed (no LibAPI call)");
+}
+
+// -------------------------------
+void Chassis::ros_enable_chassis_rotate_cmd_callback(
+    const std::shared_ptr<segway_msgs::srv::RosEnableChassisRotateCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosEnableChassisRotateCmd::Response> response)
+{
+    // .srv defines:
+    // request: bool ros_enable_chassis_rotate_cmd
+    // response: int16 chassis_enable_rotate_result (0: success; others: countdown remaining time)
+    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_enable_chassis_rotate_cmd_callback called enable=%d",
+                request->ros_enable_chassis_rotate_cmd ? 1 : 0);
+
+    // Placeholder: not implemented. Use -1 to indicate 'not implemented' status.
+    response->chassis_enable_rotate_result = static_cast<int16_t>(-1);
+    RCLCPP_WARN(rclcpp::get_logger("SmartCar"),
+                "enable_chassis_rotate: placeholder returned %d (implement LibAPI call)", response->chassis_enable_rotate_result);
+}
+
+// -------------------------------
+void Chassis::ros_get_chassis_rotate_switch_cmd_callback(
+    const std::shared_ptr<segway_msgs::srv::RosGetChassisRotateSwitchCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosGetChassisRotateSwitchCmd::Response> response)
+{
+    (void)request;
+    // .srv defines:
+    // request: bool ros_get_chassis_rotate_cmd
+    // response: uint8 chassis_rotate_state (1: can rotate in place; others: no)
+    // Placeholder: unknown => return 0
+    response->chassis_rotate_state = static_cast<uint8_t>(0);
+    RCLCPP_WARN(rclcpp::get_logger("SmartCar"),
+                "get_chassis_rotate_switch: placeholder chassis_rotate_state=0 (implement LibAPI call)");
+}
+
+// -------------------------------
+void Chassis::ros_start_chassis_left_rotate_cmd_callback(
+    const std::shared_ptr<segway_msgs::srv::RosStartChassisLeftRotateCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosStartChassisLeftRotateCmd::Response> response)
+{
+    // .srv defines:
+    // request: float64 ros_start_chassis_left_rotate_cmd (rad/s)
+    // response: int16 chassis_left_rotate_result (0: success; others: countdown)
+    RCLCPP_INFO(rclcpp::get_logger("SmartCar"),
+                "ros_start_chassis_left_rotate_cmd_callback called ang_vel=%f",
+                request->ros_start_chassis_left_rotate_cmd);
+
+    // Placeholder: not implemented — return -1 to indicate not implemented/failure.
+    response->chassis_left_rotate_result = static_cast<int16_t>(-1);
+    RCLCPP_WARN(rclcpp::get_logger("SmartCar"),
+                "start_chassis_left_rotate: placeholder returned %d (implement LibAPI call)",
+                response->chassis_left_rotate_result);
+}
+
+// -------------------------------
+void Chassis::ros_start_chassis_right_rotate_cmd_callback(
+    const std::shared_ptr<segway_msgs::srv::RosStartChassisRightRotateCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosStartChassisRightRotateCmd::Response> response)
+{
+    // .srv defines:
+    // request: float64 ros_start_chassis_right_rotate_cmd (rad/s)
+    // response: int16 chassis_right_rotate_result (0: success; others: countdown)
+    RCLCPP_INFO(rclcpp::get_logger("SmartCar"),
+                "ros_start_chassis_right_rotate_cmd_callback called ang_vel=%f",
+                request->ros_start_chassis_right_rotate_cmd);
+
+    // Placeholder: not implemented — return -1 to indicate not implemented/failure.
+    response->chassis_right_rotate_result = static_cast<int16_t>(-1);
+    RCLCPP_WARN(rclcpp::get_logger("SmartCar"),
+                "start_chassis_right_rotate: placeholder returned %d (implement LibAPI call)",
+                response->chassis_right_rotate_result);
+}
+
 //...........
 
 void Chassis::iapCmdExecute(const std::shared_ptr<goalHandaleIapCmd> goal_handle)
