@@ -34,6 +34,7 @@ set(msg_files
   "msg/MotorWorkModeFb.msg"
   "msg/SpeedFb.msg"
   "msg/TicksFb.msg"
+  "msg/FrontAxleAngleFb.msg"
 )
 
 set(srv_files
@@ -49,8 +50,18 @@ set(srv_files
   "srv/RosSetRemovePushCmd.srv"
   "srv/RosSetVelMaxCmd.srv"
   "srv/RosSetChassisCalibImuCmd.srv"
-  "srv/RosGetLowPowerShutdownThresholdCmd.srv"
-  "srv/RosSetLowPowerShutdownThresholdCmd.srv"
+  "srv/RosClearChassisErrorCodeCmd.srv"
+  "srv/RosEnableChassisRotateCmd.srv"
+  "srv/RosGetChassisRotateSwitchCmd.srv"
+  "srv/RosGetChassisSNCmd.srv"
+  "srv/RosGetHostAndChassisMatchCmd.srv"
+  "srv/RosGetRotateFunctionCfgCmd.srv"
+  "srv/RosResetHostPowerCmd.srv"
+  "srv/RosSetCfgRotateFunctionCmd.srv"
+  "srv/RosSetChassisBuzzerCmd.srv"
+  "srv/RosStartChassisLeftRotateCmd.srv"
+  "srv/RosStartChassisRightRotateCmd.srv"
+  "srv/RosStopChassisRotateCmd.srv"
 )
 
 set(action_files
