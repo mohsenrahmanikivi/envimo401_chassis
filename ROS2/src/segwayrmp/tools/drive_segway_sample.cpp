@@ -1,11 +1,11 @@
-#include <math.h>
+#include "segwayrmp/robot.h"
+#include <termio.h>
+#include <stdio.h>
 #include <iostream>
 #include <termios.h>
-#include <ros/ros.h>
-#include <geometry_msgs/Twist.h>
-#include "segwayrmp/robot.h"
-
-
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/time.h>
 
 #define PRINTHELP		  'h'
 #define ADDLINEVEL		  'w'
@@ -16,26 +16,26 @@
 #define VELRESETZERO	  'g'
 #define ENABLECMD         'e'
 #define CHASSISPAUSE      'q'
-#define IAPCHASSIS        'v'
-#define IAPMOTORFRONT     'b'
-#define IAPMOTORREAR      'n'
-#define CLEARERRORS       'm'
-#define ENABLEROTATE      'j'
-#define LEFTROTATE        'k'
-#define STOPROTATE        'l'
+// #define CLEARSCRAM        'c'
+// #define GETERROR          'x'
+#define IAPCENTRAL        'v'
+#define IAPMOTOR          'b'
+#define PRINTERRSW        'r'
 
+using iapCmd = segway_msgs::action::RosSetIapCmd;
+using goalHandleIapCmd = rclcpp_action::ClientGoalHandle<iapCmd>;
 
-int rate = 10;
-ros::Publisher cmd_pub;
-ros::ServiceServer chassis_send_event_srv_server;
+std::shared_ptr<rclcpp::Node> drive_node;
+rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr velocity_pub;
+rclcpp::Subscription<segway_msgs::msg::ErrorCodeFb>::SharedPtr error_sub;
 
-ros::ServiceClient ros_set_chassis_enable_cmd_client;
-ros::ServiceClient ros_clear_chassis_error_code_cmd_client;
-ros::ServiceClient ros_enable_chassis_rotate_cmd_client;
-ros::ServiceClient ros_start_chassis_left_rotate_cmd_client;
-ros::ServiceClient ros_stop_chassis_rotate_cmd_client;
-segway_msgs::ros_set_chassis_enable_cmd ros_set_chassis_enable_srv;
-segway_msgs::ros_set_iap_cmdGoal ros_set_iap_cmd_goal;
+rclcpp::Client<segway_msgs::srv::RosSetChassisEnableCmd>::SharedPtr enable_client;
+// rclcpp::Client<segway_msgs::srv::ClearChassisScramStatusCmd>::SharedPtr clear_scram_client;
+// rclcpp::Client<segway_msgs::srv::GetGxErrorCmd>::SharedPtr get_err_client;
+rclcpp::Service<segway_msgs::srv::ChassisSendEvent>::SharedPtr event_server;
+
+rclcpp_action::Client<iapCmd>::SharedPtr iap_client;
+uint8_t print_error = 0;
 
 char const* print_help() {
     char const* printHelp = 
@@ -48,13 +48,9 @@ char const* print_help() {
         "\t g : Speed reset to zero\n"
         "\t e : Chassis enable switch\n"
         "\t q : Running pause. Click 'q'key again to resume running by the previous speed. W/S/A/D keys can also restore chassis running\n"
-        "\t v : Iap the central board, please put the central.bin file in /sdcard/firmware/\n"
-        "\t b : Iap the motor front board, please put the motor_front.bin file in /sdcard/firmware/\n"
-        "\t n : Iap the motor rear board, please put the motor_rear.bin file in /sdcard/firmware/\n"
-        "\t m : Clear the error code of the chassis, excluding warnings and exceptions\n"
-        "\t j : Enable the chassis to rotate in place switch, 1: enable ; 0:disable\n"
-        "\t k : Rotate left in place\n"
-        "\t l : Stop rotation in place\n"
+        "\t v : Iap the central board, please put the bin file in /sdcard/firmware/\n"
+        "\t b : Iap the motor board, please put the bin file in /sdcard/firmware/\n"
+        "\t r : Open or close the switch: printing error code\n"
         "\t others : Do nothing\n";
     return printHelp;
 }
@@ -119,61 +115,47 @@ char get_keyboard()
     return keyvalue;
 }
 
-// void goal_response_callback(std::shared_future<goalHandleIapCmd::SharedPtr> future)
-// {
-//   auto goal_handle = future.get();
-//   if (!goal_handle) {
-//     RCLCPP_ERROR(rclcpp::get_logger("drive_segway_sample"), "Goal was rejected by server");
-//   } else {
-//     RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), "Goal accepted by server, waiting for result");
-//   }
-// }
-
-// void feedback_callback(
-//   goalHandleIapCmd::SharedPtr,
-//   const std::shared_ptr<const iapCmd::Feedback> feedback)
-// {
-//   RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), "IAP process percentage：[%d]", feedback->iap_percent);
-// }
-
-// void result_callback(const goalHandleIapCmd::WrappedResult & result)
-// {
-//   switch (result.code) {
-//     case rclcpp_action::ResultCode::SUCCEEDED:
-//       break;
-//     case rclcpp_action::ResultCode::ABORTED:
-//       RCLCPP_ERROR(rclcpp::get_logger("drive_segway_sample"), "Goal was aborted");
-//       return;
-//     case rclcpp_action::ResultCode::CANCELED:
-//       RCLCPP_ERROR(rclcpp::get_logger("drive_segway_sample"), "Goal was canceled");
-//       return;
-//     default:
-//       RCLCPP_ERROR(rclcpp::get_logger("drive_segway_sample"), "Unknown result code");
-//       return;
-//   }
-//   if (result.result->iap_success == 1) {
-//     RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), "iap success!");
-//   } else {
-//     RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), "iap fail!");
-//   }
-// }
-void iapActionDoneCb(const actionlib::SimpleClientGoalState& state,
-                        const segway_msgs::ros_set_iap_cmdResultConstPtr& result)
+//void goal_response_callback(std::shared_future<goalHandleIapCmd::SharedPtr> future)
+void goal_response_callback(goalHandleIapCmd::SharedPtr goal_handle)
 {
-    ROS_INFO_NAMED("drive_sample", "iap result:%d, iap_result_errorcode:%d", result->iap_result, result->error_code);
+ // auto goal_handle = future.get();
+  if (!goal_handle) {
+    RCLCPP_ERROR(rclcpp::get_logger("drive_segway_sample"), "Goal was rejected by server");
+  } else {
+    RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), "Goal accepted by server, waiting for result");
+  }
 }
 
-void iapActionActiveCb()
+void feedback_callback(
+  goalHandleIapCmd::SharedPtr,
+  const std::shared_ptr<const iapCmd::Feedback> feedback)
 {
-   ROS_INFO_NAMED("drive_sample", "iap goal just went active");
+  RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), "IAP process percentage：[%d]", feedback->iap_percent);
 }
 
-void iapActionFeedbackCb(const segway_msgs::ros_set_iap_cmdFeedbackConstPtr& feedback)
+void result_callback(const goalHandleIapCmd::WrappedResult & result)
 {
-    ROS_INFO_NAMED("drive_sample", "percent_complete : %d", feedback->iap_percent);
+  switch (result.code) {
+    case rclcpp_action::ResultCode::SUCCEEDED:
+      break;
+    case rclcpp_action::ResultCode::ABORTED:
+      RCLCPP_ERROR(rclcpp::get_logger("drive_segway_sample"), "Goal was aborted");
+      return;
+    case rclcpp_action::ResultCode::CANCELED:
+      RCLCPP_ERROR(rclcpp::get_logger("drive_segway_sample"), "Goal was canceled");
+      return;
+    default:
+      RCLCPP_ERROR(rclcpp::get_logger("drive_segway_sample"), "Unknown result code");
+      return;
+  }
+  if (result.result->iap_result == 3) {
+    RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), "iap success!");
+  } else {
+    RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), "iap fail!, error_code[%#x]", result.result->error_code);
+  }
 }
 
-void drive_chassis_test(iapActionClient& ac)
+void drive_chassis_test()
 {
     static uint16_t set_enable_cmd = 1;
     uint8_t enable_switch = 0;
@@ -182,17 +164,13 @@ void drive_chassis_test(iapActionClient& ac)
     static double send_line_speed;
     static double send_angular_speed;
     static uint8_t chassis_pause = 0;
+    // uint8_t clear_scram_flag = 0;
+    // uint8_t get_err_flag = 0;
     uint8_t iap_flag = 0;
-    uint8_t clear_err_switch = 0;
-    uint8_t enable_rotate_switch = 0;
-    uint8_t left_rotate_switch = 0;
-    uint8_t stop_rotate_switch = 0;
 
-    segway_msgs::ros_set_chassis_enable_cmd enable_request;
-    segway_msgs::ros_clear_chassis_error_code_cmd clear_err_request;
-    segway_msgs::ros_enable_chassis_rotate_cmd enable_rotate_request;
-    segway_msgs::ros_start_chassis_left_rotate_cmd left_rotate_request;
-    segway_msgs::ros_stop_chassis_rotate_cmd stop_rotate_request;
+    auto enable_request = std::make_shared<segway_msgs::srv::RosSetChassisEnableCmd::Request>();
+    // auto clear_scram_requst = std::make_shared<segway_msgs::srv::ClearChassisScramStatusCmd::Request>();
+    // auto get_err_request = std::make_shared<segway_msgs::srv::GetGxErrorCmd::Request>();
 
     char keyvalue = get_keyboard();
     switch (keyvalue)
@@ -236,10 +214,11 @@ void drive_chassis_test(iapActionClient& ac)
         break;
     case ENABLECMD      : 
         enable_switch = 1;
-        enable_request.request.ros_set_chassis_enable_cmd = set_enable_cmd;
+        enable_request->ros_set_chassis_enable_cmd = set_enable_cmd;
         ++set_enable_cmd;        
         set_enable_cmd %= 2;
-        ROS_INFO_NAMED("drive_sample", "enable chassis switch[%d]", enable_request.request.ros_set_chassis_enable_cmd);
+        RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), 
+                    "enable chassis switch[%d]", enable_request->ros_set_chassis_enable_cmd);
         printf("current set_line_speed[%lf], set_angular_speed[%lf]\n", set_line_speed, set_angular_speed);
         break;  
     case CHASSISPAUSE   :
@@ -255,120 +234,132 @@ void drive_chassis_test(iapActionClient& ac)
             printf("current set_line_speed[%lf], set_angular_speed[%lf]\n", set_line_speed, set_angular_speed);
         }
         break;   
-    case IAPCHASSIS:
-        ROS_INFO_NAMED("drive_sample", "iap central");
+    // case CLEARSCRAM :
+    //     // clear_scram_flag = 1;
+    //     break;
+    // case GETERROR:
+    //     // get_err_flag = 1;
+    //     break;
+    case IAPCENTRAL:
+        RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), "iap chassis");
         iap_flag = 1;
         break;
-    case IAPMOTORFRONT:
-        ROS_INFO_NAMED("drive_sample",  "iap motor front");
+    case IAPMOTOR:
+        RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), "iap route");
         iap_flag = 2;
         break;
-    case IAPMOTORREAR:
-        ROS_INFO_NAMED("drive_sample",  "iap motor rear");
-        iap_flag = 3;
-        break;
-    case CLEARERRORS:
-        clear_err_request.request.clear_chassis_error_code_cmd = 1;
-        ROS_INFO_NAMED("drive_sample", "clear chassis errors[%d]", clear_err_request.request.clear_chassis_error_code_cmd);
-        clear_err_switch = 1;
-        break;
-    case ENABLEROTATE:
-        enable_rotate_request.request.ros_enable_chassis_rotate_cmd = 1;
-        ROS_INFO_NAMED("drive_sample", "enable chassis rotate[%d]", enable_rotate_request.request.ros_enable_chassis_rotate_cmd);
-        enable_rotate_switch = 1;
-        break;
-    case LEFTROTATE:
-        left_rotate_request.request.ros_start_chassis_left_rotate_cmd = 2.0; //rad/s
-        ROS_INFO_NAMED("drive_sample", "left rotate[%lf]", left_rotate_request.request.ros_start_chassis_left_rotate_cmd);
-        left_rotate_switch = 1;
-        break;
-    case STOPROTATE:
-        stop_rotate_request.request.ros_stop_chassis_rotate_cmd = 1;
-        ROS_INFO_NAMED("drive_sample", "stop rotate[%d]", stop_rotate_request.request.ros_stop_chassis_rotate_cmd);
-        stop_rotate_switch = 1;
+    case PRINTERRSW:
+        print_error = ~print_error;
         break;
     default:
         break;
     }
 
-    geometry_msgs::Twist cmd_vel;
+    geometry_msgs::msg::Twist cmd_vel;
     cmd_vel.linear.x = send_line_speed;
     cmd_vel.angular.z = send_angular_speed;
-    cmd_pub.publish(cmd_vel);
+    velocity_pub->publish(cmd_vel);
 
     if (enable_switch){
-        ros_set_chassis_enable_cmd_client.call(enable_request);
+        using enableServiceResponseFutrue = rclcpp::Client<segway_msgs::srv::RosSetChassisEnableCmd>::SharedFuture;
+        auto enable_response_receive_callback = [](enableServiceResponseFutrue futrue) {
+            RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), 
+            "event sended successfully, result:%d", futrue.get()->chassis_set_chassis_enable_result);
+        };
+        auto enable_future_result = enable_client->async_send_request(enable_request, enable_response_receive_callback);
     }
+
+    // if (clear_scram_flag) {
+    //     using clearServiceResponseFuture = rclcpp::Client<segway_msgs::srv::ClearChassisScramStatusCmd>::SharedFuture;
+    //     auto clear_response_receive_callback = [](clearServiceResponseFuture future) {
+    //         RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), 
+    //         "clear scram status successfully, result:%d", future.get()->clear_scram_result);
+    //     };
+    //     auto clear_future_result = clear_scram_client->async_send_request(clear_scram_requst, clear_response_receive_callback);
+    // }
+
+    // if (get_err_flag) {
+    //     using errorServiceResponseFuture = rclcpp::Client<segway_msgs::srv::GetGxErrorCmd>::SharedFuture;
+    //     auto error_response_receive_callback = [](errorServiceResponseFuture future) {
+    //        RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), 
+    //             "chassis_error_code[%d], route_error_code[%d], connect_error_code[%d]", 
+    //         future.get()->chassis_error_code, 
+    //         future.get()->route_error_code,
+    //         future.get()->connect_error_code);
+    //     };
+    //     auto error_future_result = get_err_client->async_send_request(get_err_request, error_response_receive_callback);
+    // }
 
     if (iap_flag & 3) {
-        ros_set_iap_cmd_goal.board_index_for_iap = iap_flag;
-        ac.sendGoal(ros_set_iap_cmd_goal, &iapActionDoneCb, &iapActionActiveCb, &iapActionFeedbackCb);
-    }
-
-    if (clear_err_switch) {
-        ros_clear_chassis_error_code_cmd_client.call(clear_err_request);
-    }
-
-    if (enable_rotate_switch) {
-        ros_enable_chassis_rotate_cmd_client.call(enable_rotate_request);
-    }
-
-    if (left_rotate_switch) {
-        ros_start_chassis_left_rotate_cmd_client.call(left_rotate_request);
-    }
-
-    if (stop_rotate_switch) {
-        ros_stop_chassis_rotate_cmd_client.call(stop_rotate_request);
+        auto goal_msg = iapCmd::Goal();
+        goal_msg.iap_board = iap_flag;
+        RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), "sending goal, iap cmd goal");
+        auto send_goal_options = rclcpp_action::Client<iapCmd>::SendGoalOptions();
+        send_goal_options.goal_response_callback = std::bind(&goal_response_callback, std::placeholders::_1);
+        send_goal_options.feedback_callback = std::bind(&feedback_callback, std::placeholders::_1, std::placeholders::_2);
+        send_goal_options.result_callback = std::bind(&result_callback, std::placeholders::_1);
+        iap_client->async_send_goal(goal_msg, send_goal_options);
     }
 }
 
-bool ros_get_chassis_send_event_callback(segway_msgs::chassis_send_event::Request &req, segway_msgs::chassis_send_event::Response &res)
+void get_error_code_callback(const segway_msgs::msg::ErrorCodeFb::SharedPtr msg)
 {
-    ROS_INFO("The ROS test node receives the event ID:%d", req.chassis_send_event_id);
-    switch (req.chassis_send_event_id)
+    if (print_error != 0) {
+        RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), "host_error[%#x], central_error[%#x], \
+        left_motor_error[%#x], right_motor_error[%#x], bms_err[%#x]", 
+        msg->host_error, msg->central_error, msg->left_motor_error, msg->right_motor_error, msg->bms_error);
+    }
+}
+
+void get_chassis_event_callback(const std::shared_ptr<segway_msgs::srv::ChassisSendEvent::Request> request,
+    std::shared_ptr<segway_msgs::srv::ChassisSendEvent::Response> response)
+{
+    (void)response;
+    switch (request->chassis_send_event_id)
     {
     case OnEmergeStopEvent:
-        ROS_INFO_NAMED("drive_sample", "CHASSIS EVENT: OnEmergeStopEvent");
+        RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), "CHASSIS EVENT: The chassis emergency stop button is triggered");
         break;
     case OutEmergeStopEvent:
-        ROS_INFO_NAMED("drive_sample", "CHASSIS EVENT: OutEmergeStopEvent");
-        break;   
+        RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), "CHASSIS EVENT: OThe chassis emergency stop button recover");
+        break;
+    case PadPowerOffEvent:
+        RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), "CHASSIS EVENT: The chassis will power off");
+        break;
+    case OnLockedRotorProtectEvent:
+        RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), "CHASSIS EVENT: the chassis motor locked-rotor");
+        break;
+    case OutLockedRotorProtectEvent:
+        RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), "CHASSIS EVENT: the chassis motor no longer locked-rotor");
+        break;    
     default:
         break;
     }    
-    res.ros_is_received = true;
-    return true;
 }
 
 int main(int argc, char * argv[])
 {
-/////////////////////////////////////////////////////////////////////////////////////////
-    ros::init(argc, argv, "drive_segway_sample");
-    ros::NodeHandle n_;
+    rclcpp::init(argc, argv);
+    drive_node = rclcpp::Node::make_shared("drive_segway_sample");
 
-    //chassis
-    cmd_pub = n_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
-    ros_set_chassis_enable_cmd_client = n_.serviceClient<segway_msgs::ros_set_chassis_enable_cmd>("ros_set_chassis_enable_cmd_srv");
-    ros_clear_chassis_error_code_cmd_client = n_.serviceClient<segway_msgs::ros_clear_chassis_error_code_cmd>("ros_clear_chassis_error_code_cmd_srv");
-    ros_enable_chassis_rotate_cmd_client = n_.serviceClient<segway_msgs::ros_enable_chassis_rotate_cmd>("ros_enable_chassis_rotate_cmd_srv");
-    ros_start_chassis_left_rotate_cmd_client = n_.serviceClient<segway_msgs::ros_start_chassis_left_rotate_cmd>("ros_start_chassis_left_rotate_cmd_srv");
-    ros_stop_chassis_rotate_cmd_client = n_.serviceClient<segway_msgs::ros_stop_chassis_rotate_cmd>("ros_stop_chassis_rotate_cmd_srv");
+    velocity_pub = drive_node->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 1);
+    error_sub = drive_node->create_subscription<segway_msgs::msg::ErrorCodeFb>(
+        "error_code_fb", 1, std::bind(&get_error_code_callback, std::placeholders::_1));
 
-    chassis_send_event_srv_server = n_.advertiseService("chassis_send_event_srv", &ros_get_chassis_send_event_callback);
+    enable_client = drive_node->create_client<segway_msgs::srv::RosSetChassisEnableCmd>("set_chassis_enable");
+    // clear_scram_client = drive_node->create_client<segway_msgs::srv::ClearChassisScramStatusCmd>("clear_scram_status_srv");
+    // get_err_client = drive_node->create_client<segway_msgs::srv::GetGxErrorCmd>("get_error_srv");
+    event_server = drive_node->create_service<segway_msgs::srv::ChassisSendEvent>(
+        "event_srv", std::bind(&get_chassis_event_callback, std::placeholders::_1, std::placeholders::_2));
 
-    iapActionClient ac("ros_set_iap_cmd_action", true);
-    ROS_INFO("Waiting for action server to start.");
-    ac.waitForServer();
-    ROS_INFO("Action server started.");
-
-    ros::Rate loop_rate(rate);
-    printf("%s\n", print_help());
-    while (ros::ok()) {
-        drive_chassis_test(ac);
-  
-        loop_rate.sleep();
-        ros::spinOnce();
-    }
+    iap_client = rclcpp_action::create_client<iapCmd>(drive_node, "iapCmd");
     
+    rclcpp::TimerBase::SharedPtr timer_100hz = 
+        drive_node->create_wall_timer(std::chrono::milliseconds(10), &drive_chassis_test);
+
+    printf("%s\n", print_help());
+    
+    rclcpp::spin(drive_node);
+    rclcpp::shutdown();
     return 0;
 }
