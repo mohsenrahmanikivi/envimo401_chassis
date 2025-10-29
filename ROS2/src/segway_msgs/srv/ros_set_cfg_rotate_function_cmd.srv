@@ -1,0 +1,3 @@
+bool   cfg_in_situ_rotation_function
+---
+uint8   cfg_in_situ_rotation_result
