@@ -1,0 +1,3 @@
+bool     clear_chassis_error_code_cmd #//Clear the error code of the chassis, excluding warnings and exceptions
+---
+uint8    clear_chassis_error_code_result
