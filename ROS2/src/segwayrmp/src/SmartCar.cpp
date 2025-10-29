@@ -4,18 +4,14 @@
 int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
-    
-    //auto node = rclcpp::Node::make_shared("SmartCar");
-    //make compability with humble
-    auto node = std::make_shared<rclcpp::Node>("SmartCar");
+    auto node = rclcpp::Node::make_shared("SmartCar");
 
-    node->declare_parameter<std::string>("serial_full_name", "ttyUSB0");
+    node->declare_parameter<std::string>("serial_full_name", "/dev/ttyUSB0");
     std::string serial_full_name;
     node->get_parameter("serial_full_name", serial_full_name);
     // init_control()parameter: Fill in the full path name of the actual serial port being used
 
-    //set_smart_car_serial((char*)serial_full_name.c_str());//If a serial port is used, set the serial port name.
-    set_smart_car_serial(const_cast<char*>(serial_full_name.c_str()));
+    set_smart_car_serial((char*)serial_full_name.c_str());//If a serial port is used, set the serial port name.
     set_comu_interface(comu_serial);//Before calling init_control_ctrl, need to call this function set whether the communication port is serial or CAN.
 
     if (init_control_ctrl() == -1) { 

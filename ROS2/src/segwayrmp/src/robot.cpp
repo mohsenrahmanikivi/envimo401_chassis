@@ -297,9 +297,8 @@ void Chassis::ros_set_vel_max_cmd_callback(const std::shared_ptr<segway_msgs::sr
 void Chassis::ros_get_low_power_shutdown_threshold_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetLowPowerShutdownThresholdCmd::Request> request,
     std::shared_ptr<segway_msgs::srv::RosGetLowPowerShutdownThresholdCmd::Response> response)
 {
-  //  RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "request: [%d]", request);  //no used
-    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "request received for low power shutdown threshold");
-
+    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "request: [%d]", request);  //no used
+    
     uint16_t threshold_soc = 0;
     threshold_soc = get_low_power_shutdown_threshold();
     response->chassis_get_soc_threshold_result = threshold_soc;
@@ -346,7 +345,7 @@ void Chassis::iapCmdExecute(const std::shared_ptr<goalHandaleIapCmd> goal_handle
         break;
     default:
         RCLCPP_ERROR(rclcpp::get_logger("SmartCar"), 
-        "iap_board value error, out of [1 2]: %d", goal->iap_board);
+        "iap_board value error, out of [1 2]", goal->iap_board);
         result->set__iap_result(5);
         goal_handle->canceled(result);
         return;
