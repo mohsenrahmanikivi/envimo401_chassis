@@ -43,6 +43,7 @@
 #include "segway_msgs/srv/ros_get_low_power_shutdown_threshold_cmd.hpp"
 #include "segway_msgs/srv/ros_set_low_power_shutdown_threshold_cmd.hpp"
 #include "segway_msgs/action/ros_set_iap_cmd.hpp"
+#include "segway_msgs/srv/ros_enable_chassis_rotate_cmd.hpp" 
 
 #define pi   3.141592654
 #define pi_2 6.283185308
