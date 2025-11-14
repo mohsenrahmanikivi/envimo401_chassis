@@ -462,7 +462,7 @@ void Chassis::timer_1hz_callback(void)
     error_code_fb.host_error = get_err_state(Host);
     error_code_fb.central_error = get_err_state(Central);
     error_code_fb.rear_left_motor_error = get_err_state(Motor3) & 0xffff;
-    error_code_fb.rear_right_motor_error = (get_err_state(Motor4) >> 16) & 0xffff;
+    error_code_fb.rear_right_motor_error = (get_err_state(Motor2) >> 16) & 0xffff;
     error_code_fb.bms_error = get_err_state(BMS);
     error_code_fb_pub->publish(error_code_fb);
 
