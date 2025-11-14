@@ -116,32 +116,32 @@ namespace robot
             void ros_get_chassis_rotate_switch_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetChassisRotateSwitchCmd::Request> request,
                 std::shared_ptr<segway_msgs::srv::RosGetChassisRotateSwitchCmd::Response> response);
             // -----------------------------------------------------------------------------
-            void ros_get_charge_mos_ctrl_status_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetChargeMosCtrlStatusCmd::Request> request,
-                std::shared_ptr<segway_msgs::srv::RosGetChargeMosCtrlStatusCmd::Response> response);
+            // void ros_get_charge_mos_ctrl_status_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetChargeMosCtrlStatusCmd::Request> request,
+            //     std::shared_ptr<segway_msgs::srv::RosGetChargeMosCtrlStatusCmd::Response> response);
             void ros_get_load_param_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetLoadParamCmd::Request> request,
                 std::shared_ptr<segway_msgs::srv::RosGetLoadParamCmd::Response> response);
             void ros_get_sw_version_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetSwVersionCmd::Request> request,
                 std::shared_ptr<segway_msgs::srv::RosGetSwVersionCmd::Response> response);
             void ros_get_vel_max_feedback_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetVelMaxFeedbackCmd::Request> request,
                 std::shared_ptr<segway_msgs::srv::RosGetVelMaxFeedbackCmd::Response> response);
-            void ros_set_charge_mos_ctrl_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetChargeMosCtrlCmd::Request> request,
-                std::shared_ptr<segway_msgs::srv::RosSetChargeMosCtrlCmd::Response> response);
+            // void ros_set_charge_mos_ctrl_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetChargeMosCtrlCmd::Request> request,
+            //     std::shared_ptr<segway_msgs::srv::RosSetChargeMosCtrlCmd::Response> response);
             void ros_set_chassis_enable_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetChassisEnableCmd::Request> request,
                 std::shared_ptr<segway_msgs::srv::RosSetChassisEnableCmd::Response> response);
-            void ros_set_chassis_calib_imu_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetChassisCalibImuCmd::Request> request,
-                std::shared_ptr<segway_msgs::srv::RosSetChassisCalibImuCmd::Response> response);
+            // void ros_set_chassis_calib_imu_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetChassisCalibImuCmd::Request> request,
+            //     std::shared_ptr<segway_msgs::srv::RosSetChassisCalibImuCmd::Response> response);
             void ros_set_chassis_poweroff_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetChassisPoweroffCmd::Request> request,
                 std::shared_ptr<segway_msgs::srv::RosSetChassisPoweroffCmd::Response> response);
             void ros_set_load_param_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetLoadParamCmd::Request> request,
                 std::shared_ptr<segway_msgs::srv::RosSetLoadParamCmd::Response> response);
-            void ros_set_remove_push_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetRemovePushCmd::Request> request,
-                std::shared_ptr<segway_msgs::srv::RosSetRemovePushCmd::Response> response);
+            // void ros_set_remove_push_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetRemovePushCmd::Request> request,
+            //     std::shared_ptr<segway_msgs::srv::RosSetRemovePushCmd::Response> response);
             void ros_set_vel_max_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetVelMaxCmd::Request> request,
                 std::shared_ptr<segway_msgs::srv::RosSetVelMaxCmd::Response> response);
-            void ros_get_low_power_shutdown_threshold_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetLowPowerShutdownThresholdCmd::Request> request,
-                std::shared_ptr<segway_msgs::srv::RosGetLowPowerShutdownThresholdCmd::Response> response);
-            void ros_set_low_power_shutdown_threshold_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetLowPowerShutdownThresholdCmd::Request> request,
-                std::shared_ptr<segway_msgs::srv::RosSetLowPowerShutdownThresholdCmd::Response> response);
+            // void ros_get_low_power_shutdown_threshold_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetLowPowerShutdownThresholdCmd::Request> request,
+            //     std::shared_ptr<segway_msgs::srv::RosGetLowPowerShutdownThresholdCmd::Response> response);
+            // void ros_set_low_power_shutdown_threshold_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetLowPowerShutdownThresholdCmd::Request> request,
+            //     std::shared_ptr<segway_msgs::srv::RosSetLowPowerShutdownThresholdCmd::Response> response);
 
             rclcpp_action::Server<iapCmd>::SharedPtr iap_action_server;
 
@@ -159,15 +159,15 @@ namespace robot
             void pub_odom_callback(void);
             void cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg) const;
 
-            void iapCmdExecute(const std::shared_ptr<goalHandaleIapCmd> goal_handle);
-            rclcpp_action::GoalResponse handle_iapCmdGoal(
-                const rclcpp_action::GoalUUID & uuid,
-                std::shared_ptr<const iapCmd::Goal> goal)
-            {
-                RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "Receive goal request with iap_board %d", goal->iap_board);
-                (void)uuid;
-                return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
-            }
+            // void iapCmdExecute(const std::shared_ptr<goalHandaleIapCmd> goal_handle);
+            // rclcpp_action::GoalResponse handle_iapCmdGoal(
+            //     const rclcpp_action::GoalUUID & uuid,
+            //     std::shared_ptr<const iapCmd::Goal> goal)
+            // {
+            //     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "Receive goal request with iap_board %d", goal->iap_board);
+            //     (void)uuid;
+            //     return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
+            // }
 
             rclcpp_action::CancelResponse handle_iapCmdCancel(
                 const std::shared_ptr<goalHandaleIapCmd> goal_handle)
@@ -177,12 +177,12 @@ namespace robot
                 return rclcpp_action::CancelResponse::ACCEPT;
             }
 
-            void handle_iapCmdAccepted(const std::shared_ptr<goalHandaleIapCmd> goal_handle)
-            {
-                using namespace std::placeholders;
-                (void)goal_handle;
-                std::thread{std::bind(&Chassis::iapCmdExecute, this, _1), goal_handle}.detach();
-            }
+            // void handle_iapCmdAccepted(const std::shared_ptr<goalHandaleIapCmd> goal_handle)
+            // {
+            //     using namespace std::placeholders;
+            //     (void)goal_handle;
+            //     std::thread{std::bind(&Chassis::iapCmdExecute, this, _1), goal_handle}.detach();
+            // }
     };
 
 }
