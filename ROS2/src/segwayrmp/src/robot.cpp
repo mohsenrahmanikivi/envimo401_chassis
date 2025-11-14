@@ -113,32 +113,32 @@ Chassis::Chassis(rclcpp::Node::SharedPtr nh) : node(nh)
 
     event_client = node->create_client<segway_msgs::srv::ChassisSendEvent>("event_srv");
 
-    ros_get_charge_mos_ctrl_status_cmd_server = node->create_service<segway_msgs::srv::RosGetChargeMosCtrlStatusCmd>(
-       "get_charge_mos_ctrl_status", std::bind(&Chassis::ros_get_charge_mos_ctrl_status_cmd_callback, this, _1, _2));
+    // ros_get_charge_mos_ctrl_status_cmd_server = node->create_service<segway_msgs::srv::RosGetChargeMosCtrlStatusCmd>(
+    //    "get_charge_mos_ctrl_status", std::bind(&Chassis::ros_get_charge_mos_ctrl_status_cmd_callback, this, _1, _2));
     ros_get_load_param_cmd_server = node->create_service<segway_msgs::srv::RosGetLoadParamCmd>(
        "get_load_param", std::bind(&Chassis::ros_get_load_param_cmd_callback, this, _1, _2));
     ros_get_sw_version_cmd_server = node->create_service<segway_msgs::srv::RosGetSwVersionCmd>(
        "get_sw_version", std::bind(&Chassis::ros_get_sw_version_cmd_callback, this, _1, _2));
     ros_get_vel_max_feedback_cmd_server = node->create_service<segway_msgs::srv::RosGetVelMaxFeedbackCmd>(
        "get_vel_max_feedback", std::bind(&Chassis::ros_get_vel_max_feedback_cmd_callback, this, _1, _2));
-    ros_set_charge_mos_ctrl_cmd_server = node->create_service<segway_msgs::srv::RosSetChargeMosCtrlCmd>(
-       "set_charge_mos_ctrl", std::bind(&Chassis::ros_set_charge_mos_ctrl_cmd_callback, this, _1, _2));
+    // ros_set_charge_mos_ctrl_cmd_server = node->create_service<segway_msgs::srv::RosSetChargeMosCtrlCmd>(
+    //    "set_charge_mos_ctrl", std::bind(&Chassis::ros_set_charge_mos_ctrl_cmd_callback, this, _1, _2));
     ros_set_chassis_enable_cmd_server = node->create_service<segway_msgs::srv::RosSetChassisEnableCmd>(
        "set_chassis_enable", std::bind(&Chassis::ros_set_chassis_enable_cmd_callback, this, _1, _2));
-    ros_set_chassis_calib_imu_cmd_server = node->create_service<segway_msgs::srv::RosSetChassisCalibImuCmd>(
-       "set_chassis_calib_imu", std::bind(&Chassis::ros_set_chassis_calib_imu_cmd_callback, this, _1, _2));
+    // ros_set_chassis_calib_imu_cmd_server = node->create_service<segway_msgs::srv::RosSetChassisCalibImuCmd>(
+    //    "set_chassis_calib_imu", std::bind(&Chassis::ros_set_chassis_calib_imu_cmd_callback, this, _1, _2));
     ros_set_chassis_poweroff_cmd_server = node->create_service<segway_msgs::srv::RosSetChassisPoweroffCmd>(
        "set_chassis_poweroff", std::bind(&Chassis::ros_set_chassis_poweroff_cmd_callback, this, _1, _2));
     ros_set_load_param_cmd_server = node->create_service<segway_msgs::srv::RosSetLoadParamCmd>(
        "set_load_param", std::bind(&Chassis::ros_set_load_param_cmd_callback, this, _1, _2));
-    ros_set_remove_push_cmd_server = node->create_service<segway_msgs::srv::RosSetRemovePushCmd>(
-       "set_remove_push", std::bind(&Chassis::ros_set_remove_push_cmd_callback, this, _1, _2));
+    // ros_set_remove_push_cmd_server = node->create_service<segway_msgs::srv::RosSetRemovePushCmd>(
+    //    "set_remove_push", std::bind(&Chassis::ros_set_remove_push_cmd_callback, this, _1, _2));
     ros_set_vel_max_cmd_server = node->create_service<segway_msgs::srv::RosSetVelMaxCmd>(
        "set_vel_max", std::bind(&Chassis::ros_set_vel_max_cmd_callback, this, _1, _2));
-    ros_get_low_power_shutdown_threshold_cmd_server = node->create_service<segway_msgs::srv::RosGetLowPowerShutdownThresholdCmd>(
-       "ros_get_low_power_shutdown_threshold", std::bind(&Chassis::ros_get_low_power_shutdown_threshold_cmd_callback, this, _1, _2));
-    ros_set_low_power_shutdown_threshold_cmd_server = node->create_service<segway_msgs::srv::RosSetLowPowerShutdownThresholdCmd>(
-       "ros_set_low_power_shutdown_threshold", std::bind(&Chassis::ros_set_low_power_shutdown_threshold_cmd_callback, this, _1, _2));
+    // ros_get_low_power_shutdown_threshold_cmd_server = node->create_service<segway_msgs::srv::RosGetLowPowerShutdownThresholdCmd>(
+    //    "ros_get_low_power_shutdown_threshold", std::bind(&Chassis::ros_get_low_power_shutdown_threshold_cmd_callback, this, _1, _2));
+    // ros_set_low_power_shutdown_threshold_cmd_server = node->create_service<segway_msgs::srv::RosSetLowPowerShutdownThresholdCmd>(
+    //    "ros_set_low_power_shutdown_threshold", std::bind(&Chassis::ros_set_low_power_shutdown_threshold_cmd_callback, this, _1, _2));
     // --- add these lines to create the new services (insert near other create_service calls) ---
     ros_enable_chassis_rotate_cmd_server = node->create_service<segway_msgs::srv::RosEnableChassisRotateCmd>(
         "enable_chassis_rotate", std::bind(&Chassis::ros_enable_chassis_rotate_cmd_callback, this, _1, _2));
@@ -152,12 +152,12 @@ Chassis::Chassis(rclcpp::Node::SharedPtr nh) : node(nh)
 
 
 
-    iap_action_server = rclcpp_action::create_server<iapCmd>(
-        node, 
-        "iapCmd", 
-        std::bind(&Chassis::handle_iapCmdGoal, this, _1, _2),
-        std::bind(&Chassis::handle_iapCmdCancel, this, _1),
-        std::bind(&Chassis::handle_iapCmdAccepted, this, _1));
+    // iap_action_server = rclcpp_action::create_server<iapCmd>(
+    //     node, 
+    //     "iapCmd", 
+    //     std::bind(&Chassis::handle_iapCmdGoal, this, _1, _2),
+    //     std::bind(&Chassis::handle_iapCmdCancel, this, _1),
+    //     std::bind(&Chassis::handle_iapCmdAccepted, this, _1));
  
     odom_broadcaster = std::make_shared<tf2_ros::StaticTransformBroadcaster>(node);
     timer_1000hz = node->create_wall_timer(std::chrono::milliseconds(1), std::bind(&Chassis::timer_1000hz_callback, this)); 
