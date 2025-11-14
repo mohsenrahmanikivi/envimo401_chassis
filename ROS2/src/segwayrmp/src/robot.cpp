@@ -258,7 +258,7 @@ void Chassis::ros_enable_chassis_rotate_cmd_callback(const std::shared_ptr<segwa
     } else {  
         ret = -2;
     }
-    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_enable_chassis_rotate_cmd cmd[%d]", request->ros_set_chassis_enable_cmd);
+    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_enable_chassis_rotate_cmd cmd[%d]", request->ros_enable_chassis_rotate_cmd);
     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "chassis_set_rotate_enable_result[%d]", ret);
     response->chassis_enable_rotate_result = ret;
 }
