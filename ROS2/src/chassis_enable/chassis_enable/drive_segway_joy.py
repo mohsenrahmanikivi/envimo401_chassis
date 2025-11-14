@@ -7,28 +7,13 @@ Publishes cmd_vel at a fixed rate. If Joy stops:
  - then ramp last_valid -> zero over `ramp_down_time` seconds,
  - continue publishing zeros at the same fixed rate afterwards.
 
-Parameters (defaults):
-  max_lin: 2.0
-  min_turn_radius: 1.36
-  deadzone: 0.08
-  smoothing_alpha: 0.3
-  joy_topic: 'joy'
-  cmd_vel_topic: 'cmd_vel'
-  enable_service: 'set_chassis_enable'
-  trigger_mode: 'manual'
-  l2_axis: 4
-  r2_axis: 5
-  dpad_hat_x: -1
-  dpad_hat_y: -1
-  cmd_vel_qos_transient_local: True
-  debug_joy: False
-
-  cmd_publish_hz: 50.0
-  watchdog_timeout: 0.04           # seconds to consider a Joy "recent"
-  miss_grace_count: 2              # publish ticks to hold last command before ramping
-  ramp_down_time: 0.25             # seconds to ramp last_valid -> zero
-
+Added: support for an "in-place rotate" mode controlled by a service
+/enable_chassis_rotate (segway_msgs/srv/RosEnableChassisRotateCmd).
+Defaults: button[2] enables rotate mode, button[3] disables rotate mode.
+When rotate mode is enabled, linear velocity is forced to zero (only angular allowed).
+If the rotate service is unavailable or a call fails, node falls back to normal mode.
 """
+
 from typing import List, Tuple, Optional
 import time
 import rclpy
@@ -36,7 +21,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy
 from sensor_msgs.msg import Joy
 from geometry_msgs.msg import Twist
-from segway_msgs.srv import RosSetChassisEnableCmd
+from segway_msgs.srv import RosSetChassisEnableCmd, RosEnableChassisRotateCmd
 
 def apply_deadzone(value: float, deadzone: float) -> float:
     return 0.0 if abs(value) <= deadzone else value
@@ -53,6 +38,11 @@ class DriveSegwayJoy(Node):
         self.declare_parameter('joy_topic', 'joy')
         self.declare_parameter('cmd_vel_topic', 'cmd_vel')
         self.declare_parameter('enable_service', 'set_chassis_enable')
+
+        # rotate service params
+        self.declare_parameter('rotate_service', '/enable_chassis_rotate')
+        self.declare_parameter('rotate_enable_button', 2)   # default button index to enable rotate
+        self.declare_parameter('rotate_disable_button', 3)  # default button index to disable rotate
 
         self.declare_parameter('trigger_mode', 'manual')
         self.declare_parameter('l2_axis', 4)
@@ -78,6 +68,10 @@ class DriveSegwayJoy(Node):
         self.joy_topic = str(self.get_parameter('joy_topic').value)
         self.cmd_vel_topic = str(self.get_parameter('cmd_vel_topic').value)
         self.enable_service = str(self.get_parameter('enable_service').value)
+
+        self.rotate_service = str(self.get_parameter('rotate_service').value)
+        self.rotate_enable_button = int(self.get_parameter('rotate_enable_button').value)
+        self.rotate_disable_button = int(self.get_parameter('rotate_disable_button').value)
 
         self.trigger_mode = str(self.get_parameter('trigger_mode').value)
         self.l2_axis = int(self.get_parameter('l2_axis').value)
@@ -113,6 +107,18 @@ class DriveSegwayJoy(Node):
         if not self.enable_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().warn(f'{self.enable_service} not available yet; will retry on call')
 
+        # rotate service client
+        self.rotate_client = self.create_client(RosEnableChassisRotateCmd, self.rotate_service)
+        if not self.rotate_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().warn(f'{self.rotate_service} not available yet; will retry on call')
+
+        # ensure rotate is disabled at startup (best-effort)
+        try:
+            self.call_rotate_service(False)
+        except Exception:
+            # call_rotate_service logs failures; just proceed
+            pass
+
         # state for smoothing / publishing / watchdog / ramp
         self.prev_twist = Twist()            # smoothed twist (updated by joy_callback)
         self._last_valid_twist = Twist()     # copy of last valid smoothed twist to hold / ramp from
@@ -120,6 +126,9 @@ class DriveSegwayJoy(Node):
         self.last_buttons: List[int] = []
         self._last_axes: Optional[List[float]] = None
         self._last_debug_time = time.time()
+
+        # rotate mode flag (False = normal; True = rotate-only)
+        self._rotate_mode_enabled = False
 
         # ramp/grace state
         self._consecutive_misses = 0
@@ -131,7 +140,7 @@ class DriveSegwayJoy(Node):
 
         self.get_logger().info(
             f'drive_segway_joy ready: publish {self.cmd_publish_hz}Hz, watchdog={self.watchdog_timeout}s, '
-            f'miss_grace={self.miss_grace_count}, ramp_down={self.ramp_down_time}s'
+            f'miss_grace={self.miss_grace_count}, ramp_down={self.ramp_down_time}s, rotate_service={self.rotate_service}'
         )
 
     # PS trigger mapping: axis in [+1..-1] -> fraction [0..1]
@@ -263,6 +272,10 @@ class DriveSegwayJoy(Node):
 
         desired.linear.x += (fwd - bwd)
 
+        # If rotate mode is enabled, force linear to zero (only angular allowed)
+        if self._rotate_mode_enabled:
+            desired.linear.x = 0.0
+
         # clamp
         desired.linear.x = max(min(desired.linear.x, self.max_lin), -self.max_lin)
         desired.angular.z = max(min(desired.angular.z, self.max_ang), -self.max_ang)
@@ -284,7 +297,7 @@ class DriveSegwayJoy(Node):
         if self.debug_joy:
             self.get_logger().info(f'Computed smoothed twist linear={smoothed.linear.x:.3f} ang={smoothed.angular.z:.3f}')
 
-        # enable/disable service calls (unchanged)
+        # enable/disable chassis service calls (unchanged)
         if len(buttons) != len(self.last_buttons):
             self.last_buttons = [0] * len(buttons)
         if len(buttons) > 0 and buttons[0] == 1 and self.last_buttons[0] == 0:
@@ -293,11 +306,45 @@ class DriveSegwayJoy(Node):
         if len(buttons) > 1 and buttons[1] == 1 and self.last_buttons[1] == 0:
             self.get_logger().info('Disable pressed -> calling set_chassis_enable(False)')
             self.call_enable_service(False)
+
+        # rotate-mode enable/disable buttons
+        # enable (button press edge)
+        if 0 <= self.rotate_enable_button < len(buttons) and buttons[self.rotate_enable_button] == 1 and \
+           self.last_buttons[self.rotate_enable_button] == 0:
+            self.get_logger().info('Rotate-enable pressed -> calling rotate service(True)')
+            success = self.call_rotate_service(True)
+            if success:
+                self._rotate_mode_enabled = True
+            else:
+                self.get_logger().warn('Failed to enable rotate mode; staying in normal mode')
+
+        # disable (button press edge)
+        if 0 <= self.rotate_disable_button < len(buttons) and buttons[self.rotate_disable_button] == 1 and \
+           self.last_buttons[self.rotate_disable_button] == 0:
+            self.get_logger().info('Rotate-disable pressed -> calling rotate service(False)')
+            success = self.call_rotate_service(False)
+            # always clear local flag on disable attempt (even if service call fails, safer to go normal)
+            self._rotate_mode_enabled = False
+            if not success:
+                self.get_logger().warn('Attempted to disable rotate mode but service call failed; node remains in normal mode')
+
         self.last_buttons = list(buttons)
 
     def _publish_timer_cb(self):
         """Publish at fixed rate. Uses grace + ramp to avoid sudden zero on single missed frames."""
         now = time.time()
+
+        # If rotate mode is enabled, ensure rotate service is still available; if not, disable rotate mode.
+        try:
+            # small non-blocking check (0.01s)
+            if self._rotate_mode_enabled and not self.rotate_client.wait_for_service(timeout_sec=0.01):
+                self.get_logger().warn('Rotate service unavailable -> disabling rotate mode (fallback to normal mode)')
+                self._rotate_mode_enabled = False
+        except Exception:
+            # In case wait_for_service throws, be conservative and disable rotate mode
+            if self._rotate_mode_enabled:
+                self.get_logger().warn('Error checking rotate service -> disabling rotate mode')
+            self._rotate_mode_enabled = False
 
         # Determine if Joy is recent
         joy_recent = False
@@ -310,18 +357,33 @@ class DriveSegwayJoy(Node):
             # fresh joy -> reset counters, publish the latest smoothed twist
             self._consecutive_misses = 0
             self._ramp_start_time = None
-            publish_twist = self.prev_twist
+
+            # if rotate mode is enabled, ensure linear is always zero before publishing
+            if self._rotate_mode_enabled:
+                t = Twist()
+                t.linear.x = 0.0
+                t.angular.z = float(self.prev_twist.angular.z)
+                publish_twist = t
+            else:
+                publish_twist = self.prev_twist
+
             # refresh last valid twist copy (safe guard)
             self._last_valid_twist = Twist()
-            self._last_valid_twist.linear.x = float(self.prev_twist.linear.x)
-            self._last_valid_twist.angular.z = float(self.prev_twist.angular.z)
+            self._last_valid_twist.linear.x = float(publish_twist.linear.x)
+            self._last_valid_twist.angular.z = float(publish_twist.angular.z)
         else:
             # no fresh joy this tick
             self._consecutive_misses += 1
 
             if self._consecutive_misses <= self.miss_grace_count:
                 # still in grace window -> hold last valid twist
-                publish_twist = self._last_valid_twist
+                # if rotate mode is enabled, hold last valid angular but force linear zero
+                if self._rotate_mode_enabled:
+                    publish_twist = Twist()
+                    publish_twist.linear.x = 0.0
+                    publish_twist.angular.z = float(self._last_valid_twist.angular.z)
+                else:
+                    publish_twist = self._last_valid_twist
             else:
                 # Exceeded grace -> ramp down from last valid twist -> zero
                 if self._ramp_start_time is None:
@@ -334,8 +396,13 @@ class DriveSegwayJoy(Node):
                     factor = max(0.0, 1.0 - (elapsed / self.ramp_down_time))
 
                 publish_twist = Twist()
-                publish_twist.linear.x = self._last_valid_twist.linear.x * factor
-                publish_twist.angular.z = self._last_valid_twist.angular.z * factor
+                # If rotate mode is enabled, ramp angular only; linear stays zero.
+                if self._rotate_mode_enabled:
+                    publish_twist.linear.x = 0.0
+                    publish_twist.angular.z = self._last_valid_twist.angular.z * factor
+                else:
+                    publish_twist.linear.x = self._last_valid_twist.linear.x * factor
+                    publish_twist.angular.z = self._last_valid_twist.angular.z * factor
 
                 # once fully ramped to zero, ensure internal state is zeroed (avoid reintroducing)
                 if factor == 0.0:
@@ -360,6 +427,28 @@ class DriveSegwayJoy(Node):
             return
         fut = self.enable_client.call_async(req)
         fut.add_done_callback(lambda f: self.get_logger().info(f'set_chassis_enable({enable}) called'))
+
+    def call_rotate_service(self, enable: bool) -> bool:
+        """
+        Calls the rotate enable service. Returns True if the call was started (best-effort),
+        False if the service was not available or call failed immediately.
+        """
+        if not self.rotate_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().warn('Rotate service not available; cannot set rotate mode')
+            return False
+        req = RosEnableChassisRotateCmd.Request()
+        try:
+            req.ros_enable_chassis_rotate_cmd = bool(enable)
+        except AttributeError:
+            self.get_logger().error('RosEnableChassisRotateCmd.Request has no field "ros_enable_chassis_rotate_cmd"')
+            return False
+        try:
+            fut = self.rotate_client.call_async(req)
+            fut.add_done_callback(lambda f: self.get_logger().info(f'{self.rotate_service}({enable}) called'))
+            return True
+        except Exception as e:
+            self.get_logger().error(f'Failed to call rotate service: {e}')
+            return False
 
 def main(args=None):
     rclpy.init(args=args)
