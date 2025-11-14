@@ -52,6 +52,7 @@ set(srv_files
   "srv/RosGetLowPowerShutdownThresholdCmd.srv"
   "srv/RosSetLowPowerShutdownThresholdCmd.srv"
   "srv/RosEnableChassisRotateCmd.srv"
+  "srv/RosGetChassisRotateSwitchCmd.srv"
 )
 
 set(action_files

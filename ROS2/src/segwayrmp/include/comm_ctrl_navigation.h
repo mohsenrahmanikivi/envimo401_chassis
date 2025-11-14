@@ -8,7 +8,7 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
-#define TYPE_ID_NUM                     10   //Number of callback functions
+#define TYPE_ID_NUM                     12   //Number of callback functions
 //--------------------------DATA CALL BACK INDEX--------------------------
 #define Chassis_Data_Speed       		1
 #define Chassis_Data_Ticks              2
@@ -32,6 +32,7 @@ extern "C" {
 #define CalibrateGyroFail			10  // Chassis gyroscope calibration failed
 #define CalibratePasheCurrentSuccess	11	// Chassis gyroscope calibration successful
 #define CalibratePasheCurrentFail		12  // Chassis gyroscope calibration failed
+#define ChassisLockRotorWarning		    13  // Chassis locked rotor warning for more than 5 seconds
 
 
 //---------The proportional coefficient of the callback gyro data------------------
@@ -176,7 +177,8 @@ uint8_t	set_charge_mos_ctrl(bool on);//Set the switch for charging MOS on the ce
 uint8_t	set_buzzer_work_status(uint16_t buzzerSet);
 int8_t  set_calib_gyro(void);//Calibrate the IMU of the chassis, ret:0:success; -1: fail to send cmd; -2: fail to calib; -3: overtime
 uint8_t	set_low_power_shutdown_threshold(uint16_t low_power_shutdown_threshold);//Set the SOC threshold for a low-power shutdown
-
+int16_t enable_rotate_switch(uint8_t enable); //Enable the chassis to rotate in place switch, 1: enable ; 0:disable
+uint8_t get_rotate_switch_stat(void); //Query the status of the in-situ rotation switch on che chassis
 extern int32_t IapSingerBoard(char * path,char * boradname,char* version);
 #endif
 

@@ -44,6 +44,7 @@
 #include "segway_msgs/srv/ros_set_low_power_shutdown_threshold_cmd.hpp"
 #include "segway_msgs/action/ros_set_iap_cmd.hpp"
 #include "segway_msgs/srv/ros_enable_chassis_rotate_cmd.hpp" 
+#include "segway_msgs/srv/ros_get_chassis_rotate_switch_cmd.hpp"
 
 #define pi   3.141592654
 #define pi_2 6.283185308
@@ -106,7 +107,15 @@ namespace robot
             rclcpp::Service<segway_msgs::srv::RosSetVelMaxCmd>::SharedPtr ros_set_vel_max_cmd_server;
             rclcpp::Service<segway_msgs::srv::RosGetLowPowerShutdownThresholdCmd>::SharedPtr ros_get_low_power_shutdown_threshold_cmd_server;
             rclcpp::Service<segway_msgs::srv::RosSetLowPowerShutdownThresholdCmd>::SharedPtr ros_set_low_power_shutdown_threshold_cmd_server;
-
+            // --- add these members to the Chassis class (with other service SharedPtr members) ---
+            rclcpp::Service<segway_msgs::srv::RosEnableChassisRotateCmd>::SharedPtr ros_enable_chassis_rotate_cmd_server;
+            rclcpp::Service<segway_msgs::srv::RosGetChassisRotateSwitchCmd>::SharedPtr ros_get_chassis_rotate_switch_cmd_server;
+            // --- add these method prototypes (with existing service callback prototypes) ---
+            void ros_enable_chassis_rotate_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosEnableChassisRotateCmd::Request> request,
+                std::shared_ptr<segway_msgs::srv::RosEnableChassisRotateCmd::Response> response);
+            void ros_get_chassis_rotate_switch_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetChassisRotateSwitchCmd::Request> request,
+                std::shared_ptr<segway_msgs::srv::RosGetChassisRotateSwitchCmd::Response> response);
+            // -----------------------------------------------------------------------------
             void ros_get_charge_mos_ctrl_status_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetChargeMosCtrlStatusCmd::Request> request,
                 std::shared_ptr<segway_msgs::srv::RosGetChargeMosCtrlStatusCmd::Response> response);
             void ros_get_load_param_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetLoadParamCmd::Request> request,

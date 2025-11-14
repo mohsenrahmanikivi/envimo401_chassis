@@ -139,6 +139,13 @@ Chassis::Chassis(rclcpp::Node::SharedPtr nh) : node(nh)
        "ros_get_low_power_shutdown_threshold", std::bind(&Chassis::ros_get_low_power_shutdown_threshold_cmd_callback, this, _1, _2));
     ros_set_low_power_shutdown_threshold_cmd_server = node->create_service<segway_msgs::srv::RosSetLowPowerShutdownThresholdCmd>(
        "ros_set_low_power_shutdown_threshold", std::bind(&Chassis::ros_set_low_power_shutdown_threshold_cmd_callback, this, _1, _2));
+    // --- add these lines to create the new services (insert near other create_service calls) ---
+    ros_enable_chassis_rotate_cmd_server = node->create_service<segway_msgs::srv::RosEnableChassisRotateCmd>(
+        "enable_chassis_rotate", std::bind(&Chassis::ros_enable_chassis_rotate_cmd_callback, this, _1, _2));
+    ros_get_chassis_rotate_switch_cmd_server = node->create_service<segway_msgs::srv::RosGetChassisRotateSwitchCmd>(
+        "get_chassis_rotate_switch", std::bind(&Chassis::ros_get_chassis_rotate_switch_cmd_callback, this, _1, _2));
+    // -----------------------------------------------------------------------------
+   
 
     velocity_sub = node->create_subscription<geometry_msgs::msg::Twist>(
         "cmd_vel", 1, std::bind(&Chassis::cmd_vel_callback, this, std::placeholders::_1));
@@ -237,6 +244,41 @@ void Chassis::ros_set_chassis_enable_cmd_callback(const std::shared_ptr<segway_m
     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "chassis_set_chassis_enable_result[%d]", ret);
     response->chassis_set_chassis_enable_result = ret;
 }
+
+// --- add this code near the other service callbacks ---
+
+void Chassis::ros_enable_chassis_rotate_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosEnableChassisRotateCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosEnableChassisRotateCmd::Response> response)
+{   
+    int16_t ret= -2; 
+    if (request->ros_enable_chassis_rotate_cmd == false) { 
+        ret = enable_rotate_switch(0);                              // native C function from driver
+    } else if (request->ros_enable_chassis_rotate_cmd == true) {
+        ret = enable_rotate_switch(1);                              // enable rotate in-place
+    } else {  
+        ret = -2;
+    }
+    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_enable_chassis_rotate_cmd cmd[%d]", request->ros_set_chassis_enable_cmd);
+    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "chassis_set_rotate_enable_result[%d]", ret);
+    response->chassis_enable_rotate_result = ret;
+}
+
+void Chassis::ros_get_chassis_rotate_switch_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetChassisRotateSwitchCmd::Request> request,
+    std::shared_ptr<segway_msgs::srv::RosGetChassisRotateSwitchCmd::Response> response)
+{
+    uint8_t state = 0;
+    if (request->ros_get_chassis_rotate_cmd == false) {
+        response->chassis_rotate_state = 0;
+        RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_get_chassis_rotate_switch_cmd received false request");
+        return;
+    }
+
+    state = get_rotate_switch_stat(); // native C function from driver
+    response->chassis_rotate_state = state;
+    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "chassis_rotate_state: %d", (int)state);
+}
+// -----------------------------------------------------------------------------
+
 void Chassis::ros_set_chassis_calib_imu_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetChassisCalibImuCmd::Request> request,
     std::shared_ptr<segway_msgs::srv::RosSetChassisCalibImuCmd::Response> response)
 {
