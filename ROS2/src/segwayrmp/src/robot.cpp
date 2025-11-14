@@ -13,11 +13,11 @@ typedef struct{
     void * dataPtr;
 }SegwayData;
 
-chassis_speed_data_t SpeedData;
+chassis_car_speed_data_t SpeedData;
 uint64_t    Speed_TimeStamp;
 uint8_t      Speed_update;
 
-motor_ticks_t TickData;
+rear_motors_ticks_t TickData;
 uint64_t    Tick_TimeStamp;
 uint8_t     Tick_update;
 
@@ -40,8 +40,8 @@ uint8_t OdomEulerZ_update;
 uint8_t OdomVelLineXy_update;
 
 static SegwayData segway_data_tbl[] = {
-    {Chassis_Data_Speed,  sizeof(SpeedData), &Speed_TimeStamp, &Speed_update, &SpeedData},
-    {Chassis_Data_Ticks,  sizeof(TickData), &Tick_TimeStamp, &Tick_update, &TickData},
+    {Chassis_Data_Car_Speed,  sizeof(SpeedData), &Speed_TimeStamp, &Speed_update, &SpeedData},
+    {Chassis_Data_Rear_Ticks,  sizeof(TickData), &Tick_TimeStamp, &Tick_update, &TickData},
     {Chassis_Data_Imu_Gyr,  sizeof(ImuGyroData), &ImuGyro_TimeStamp, &ImuGyro_update, &ImuGyroData},
     {Chassis_Data_Imu_Acc,  sizeof(ImuAccData), &ImuAcc_TimeStamp, &ImuAcc_update, &ImuAccData},
     {Chassis_Data_Odom_Pose_xy,  sizeof(OdomPoseXy), &Odom_TimeStamp, &OdomPoseXy_update, &OdomPoseXy},
@@ -81,7 +81,7 @@ void Chassis::pub_event_callback(int event_no)
     event_request->chassis_send_event_id = event_no;
     auto event_response_receive_callback = [](eventServiceResponseFutrue futrue) {
         (void)futrue;
-        RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "event sended successfully");
+        RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "event sent successfully");
     };
     auto event_future_result = event_client->async_send_request(event_request, event_response_receive_callback);
 }
