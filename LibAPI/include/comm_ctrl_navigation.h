@@ -480,6 +480,11 @@ int8_t set_calib_gyro(void);
 */
 uint8_t set_low_power_shutdown_threshold(uint16_t low_power_shutdown_threshold);
 
+
+int16_t enable_rotate_switch(uint8_t enable); //Enable the chassis to rotate in place switch, 1: enable ; 0:disable
+uint8_t get_rotate_switch_stat(void); //Query the status of the in-situ rotation switch on che chassis
+
+
 /**
 * @brief   Perform IAP on a single board
 * @param   path: The path to the firmware file
