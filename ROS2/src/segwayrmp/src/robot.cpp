@@ -81,7 +81,7 @@ void Chassis::pub_event_callback(int event_no)
     event_request->chassis_send_event_id = event_no;
     auto event_response_receive_callback = [](eventServiceResponseFutrue futrue) {
         (void)futrue;
-        RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "event sent successfully");
+        RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "event sended successfully");
     };
     auto event_future_result = event_client->async_send_request(event_request, event_response_receive_callback);
 }
