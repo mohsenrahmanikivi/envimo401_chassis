@@ -279,14 +279,14 @@ void Chassis::ros_get_chassis_rotate_switch_cmd_callback(const std::shared_ptr<s
 }
 // -----------------------------------------------------------------------------
 
-void Chassis::ros_set_chassis_calib_imu_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetChassisCalibImuCmd::Request> request,
-    std::shared_ptr<segway_msgs::srv::RosSetChassisCalibImuCmd::Response> response)
-{
-    (void)request;
-    int8_t calib_ret = set_calib_gyro();
-    response->chassis_calib_imu_result = calib_ret;
-    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "response->chassis_calib_imu_result:%d[0:success; -1:fail to send cmd; -2:fail to calib; -3: overtime] ", calib_ret);
-}                
+// void Chassis::ros_set_chassis_calib_imu_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetChassisCalibImuCmd::Request> request,
+//     std::shared_ptr<segway_msgs::srv::RosSetChassisCalibImuCmd::Response> response)
+// {
+//     (void)request;
+//     int8_t calib_ret = set_calib_gyro();
+//     response->chassis_calib_imu_result = calib_ret;
+//     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "response->chassis_calib_imu_result:%d[0:success; -1:fail to send cmd; -2:fail to calib; -3: overtime] ", calib_ret);
+// }                
 void Chassis::ros_set_chassis_poweroff_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetChassisPoweroffCmd::Request> request,
     std::shared_ptr<segway_msgs::srv::RosSetChassisPoweroffCmd::Response> response)
 {
@@ -310,17 +310,17 @@ void Chassis::ros_set_load_param_cmd_callback(const std::shared_ptr<segway_msgs:
     response->chassis_set_load_param_result = ret;
     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "chassis_set_load_param_result[%d]", ret);
 }
-void Chassis::ros_set_remove_push_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetRemovePushCmd::Request> request,
-    std::shared_ptr<segway_msgs::srv::RosSetRemovePushCmd::Response> response)
-{
-    if (request->ros_set_remove_push_cmd == false) {
-        RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_set_remove_push_cmd fasle");
-        return;
-    }
-    uint8_t ret = set_remove_push_cmd();
-    response->chassis_set_revove_push_result = ret;
-    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "chassis_set_revove_push_result[%d]", ret);
-}
+// void Chassis::ros_set_remove_push_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetRemovePushCmd::Request> request,
+//     std::shared_ptr<segway_msgs::srv::RosSetRemovePushCmd::Response> response)
+// {
+//     if (request->ros_set_remove_push_cmd == false) {
+//         RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_set_remove_push_cmd fasle");
+//         return;
+//     }
+//     uint8_t ret = set_remove_push_cmd();
+//     response->chassis_set_revove_push_result = ret;
+//     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "chassis_set_revove_push_result[%d]", ret);
+// }
 void Chassis::ros_set_vel_max_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetVelMaxCmd::Request> request,
     std::shared_ptr<segway_msgs::srv::RosSetVelMaxCmd::Response> response)
 {
@@ -336,99 +336,99 @@ void Chassis::ros_set_vel_max_cmd_callback(const std::shared_ptr<segway_msgs::sr
     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "set_line_forward_max_vel result[%d], set_line_backward_max_vel result[%d], set_angular_max_vel result[%d]", 
         ret_forw, ret_back, ret_angl);
 }
-void Chassis::ros_get_low_power_shutdown_threshold_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetLowPowerShutdownThresholdCmd::Request> request,
-    std::shared_ptr<segway_msgs::srv::RosGetLowPowerShutdownThresholdCmd::Response> response)
-{
-  //  RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "request: [%d]", request);  //no used
-    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "request received for low power shutdown threshold");
+// void Chassis::ros_get_low_power_shutdown_threshold_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetLowPowerShutdownThresholdCmd::Request> request,
+//     std::shared_ptr<segway_msgs::srv::RosGetLowPowerShutdownThresholdCmd::Response> response)
+// {
+//   //  RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "request: [%d]", request);  //no used
+//     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "request received for low power shutdown threshold");
 
-    uint16_t threshold_soc = 0;
-    threshold_soc = get_low_power_shutdown_threshold();
-    response->chassis_get_soc_threshold_result = threshold_soc;
-    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "response->chassis_get_soc_threshold_result:[%d], get_low_power_shutdown_threshold():[%d] ", response->chassis_get_soc_threshold_result,threshold_soc);
-}
-void Chassis::ros_set_low_power_shutdown_threshold_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetLowPowerShutdownThresholdCmd::Request> request,
-    std::shared_ptr<segway_msgs::srv::RosSetLowPowerShutdownThresholdCmd::Response> response)
-{
-    uint8_t threshold_ret = set_low_power_shutdown_threshold(request->ros_set_low_power_shutdown_threshold);
-    response->chassis_set_soc_threshold_result = threshold_ret;
-    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "request->ros_set_low_power_shutdown_threshold: [%d]", request->ros_set_low_power_shutdown_threshold);
-    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "response->chassis_set_soc_threshold_result:%d[0:success; -1:fail to send cmd; -2:fail to calib; -3: overtime] ", threshold_ret);
-}
+//     uint16_t threshold_soc = 0;
+//     threshold_soc = get_low_power_shutdown_threshold();
+//     response->chassis_get_soc_threshold_result = threshold_soc;
+//     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "response->chassis_get_soc_threshold_result:[%d], get_low_power_shutdown_threshold():[%d] ", response->chassis_get_soc_threshold_result,threshold_soc);
+// }
+// void Chassis::ros_set_low_power_shutdown_threshold_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetLowPowerShutdownThresholdCmd::Request> request,
+//     std::shared_ptr<segway_msgs::srv::RosSetLowPowerShutdownThresholdCmd::Response> response)
+// {
+//     uint8_t threshold_ret = set_low_power_shutdown_threshold(request->ros_set_low_power_shutdown_threshold);
+//     response->chassis_set_soc_threshold_result = threshold_ret;
+//     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "request->ros_set_low_power_shutdown_threshold: [%d]", request->ros_set_low_power_shutdown_threshold);
+//     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "response->chassis_set_soc_threshold_result:%d[0:success; -1:fail to send cmd; -2:fail to calib; -3: overtime] ", threshold_ret);
+// }
 
-void Chassis::iapCmdExecute(const std::shared_ptr<goalHandaleIapCmd> goal_handle)
-{
-    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "Executing goal");
-    rclcpp::Rate loop_rate(1);
-    const auto goal = goal_handle->get_goal();
-    auto feedback = std::make_shared<iapCmd::Feedback>();
-    auto result = std::make_shared<iapCmd::Result>();
-    int32_t iap_percent_fb;
+// void Chassis::iapCmdExecute(const std::shared_ptr<goalHandaleIapCmd> goal_handle)
+// {
+//     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "Executing goal");
+//     rclcpp::Rate loop_rate(1);
+//     const auto goal = goal_handle->get_goal();
+//     auto feedback = std::make_shared<iapCmd::Feedback>();
+//     auto result = std::make_shared<iapCmd::Result>();
+//     int32_t iap_percent_fb;
     
-    node->get_parameter("bins_directory", bins_directory);
-    node->get_parameter("central_version", central_version);
-    node->get_parameter("motor_version", motor_version);
-    char bin_dir[100] = {0};
-    char ver[100] = {0};
-    switch (goal->iap_board)
-    {
-    case 1:
-        RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "iap central board");
-        bins_directory = bins_directory + "/central.bin";
-        bins_directory.copy(bin_dir, bins_directory.length(), 0);
-        central_version.copy(ver, central_version.length(), 0);
-        IapSingerBoard(bin_dir, (char*)"central", ver);
-        break;
-    case 2:
-        RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "iap motor board");
-        bins_directory = bins_directory + "/motor.bin";
-        bins_directory.copy(bin_dir, bins_directory.length(), 0);
-        motor_version.copy(ver, motor_version.length(), 0);
-        IapSingerBoard(bin_dir, (char*)"motor", ver);
-        break;
-    default:
-        RCLCPP_ERROR(rclcpp::get_logger("SmartCar"), 
-        "iap_board value error, out of [1 2]: %d", goal->iap_board);
-        result->set__iap_result(5);
-        goal_handle->canceled(result);
-        return;
-    }
+//     node->get_parameter("bins_directory", bins_directory);
+//     node->get_parameter("central_version", central_version);
+//     node->get_parameter("motor_version", motor_version);
+//     char bin_dir[100] = {0};
+//     char ver[100] = {0};
+//     switch (goal->iap_board)
+//     {
+//     case 1:
+//         RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "iap central board");
+//         bins_directory = bins_directory + "/central.bin";
+//         bins_directory.copy(bin_dir, bins_directory.length(), 0);
+//         central_version.copy(ver, central_version.length(), 0);
+//         IapSingerBoard(bin_dir, (char*)"central", ver);
+//         break;
+//     case 2:
+//         RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "iap motor board");
+//         bins_directory = bins_directory + "/motor.bin";
+//         bins_directory.copy(bin_dir, bins_directory.length(), 0);
+//         motor_version.copy(ver, motor_version.length(), 0);
+//         IapSingerBoard(bin_dir, (char*)"motor", ver);
+//         break;
+//     default:
+//         RCLCPP_ERROR(rclcpp::get_logger("SmartCar"), 
+//         "iap_board value error, out of [1 2]: %d", goal->iap_board);
+//         result->set__iap_result(5);
+//         goal_handle->canceled(result);
+//         return;
+//     }
 
-    while (rclcpp::ok())
-    {
-        if (goal_handle->is_canceling()) {
-            result->set__iap_result(5);
-            goal_handle->canceled(result);
-            RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "Goal canceled");
-            return;
-        }
-        iap_percent_fb = getIapTotalProgress();
-        feedback->set__iap_percent(iap_percent_fb);
-        goal_handle->publish_feedback(feedback);
-        RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "iap percent: %d", iap_percent_fb);
-        loop_rate.sleep();
-        if (iap_percent_fb == 100) {
-            RCLCPP_INFO_ONCE(rclcpp::get_logger("SmartCar"), "iap successful");
-            break;
-        } else if (iap_percent_fb < 0) {
-            RCLCPP_INFO_ONCE(rclcpp::get_logger("SmartCar"), "iap failed");
-            break;
-        }
-    }
+//     while (rclcpp::ok())
+//     {
+//         if (goal_handle->is_canceling()) {
+//             result->set__iap_result(5);
+//             goal_handle->canceled(result);
+//             RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "Goal canceled");
+//             return;
+//         }
+//         iap_percent_fb = getIapTotalProgress();
+//         feedback->set__iap_percent(iap_percent_fb);
+//         goal_handle->publish_feedback(feedback);
+//         RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "iap percent: %d", iap_percent_fb);
+//         loop_rate.sleep();
+//         if (iap_percent_fb == 100) {
+//             RCLCPP_INFO_ONCE(rclcpp::get_logger("SmartCar"), "iap successful");
+//             break;
+//         } else if (iap_percent_fb < 0) {
+//             RCLCPP_INFO_ONCE(rclcpp::get_logger("SmartCar"), "iap failed");
+//             break;
+//         }
+//     }
     
-    if (rclcpp::ok()) {
-        if (iap_percent_fb == 100) {
-            result->set__iap_result(3);
-            goal_handle->succeed(result);
-            RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "goal succeeded, iap succeeded");
-        } else {
-            result->set__iap_result(getHostIapResult());
-            result->set__error_code(getHostIapErrorCode());
-            goal_handle->succeed(result);
-            RCLCPP_ERROR(rclcpp::get_logger("SmartCar"), "goal failed, iap failed");
-        }
-    }
-}
+//     if (rclcpp::ok()) {
+//         if (iap_percent_fb == 100) {
+//             result->set__iap_result(3);
+//             goal_handle->succeed(result);
+//             RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "goal succeeded, iap succeeded");
+//         } else {
+//             result->set__iap_result(getHostIapResult());
+//             result->set__error_code(getHostIapErrorCode());
+//             goal_handle->succeed(result);
+//             RCLCPP_ERROR(rclcpp::get_logger("SmartCar"), "goal failed, iap failed");
+//         }
+//     }
+// }
 
 void Chassis::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg) const
 {
@@ -461,8 +461,8 @@ void Chassis::timer_1hz_callback(void)
 
     error_code_fb.host_error = get_err_state(Host);
     error_code_fb.central_error = get_err_state(Central);
-    error_code_fb.left_motor_error = get_err_state(Motor) & 0xffff;
-    error_code_fb.right_motor_error = (get_err_state(Motor) >> 16) & 0xffff;
+    error_code_fb.rear_left_motor_error = get_err_state(Motor3) & 0xffff;
+    error_code_fb.rear_right_motor_error = (get_err_state(Motor4) >> 16) & 0xffff;
     error_code_fb.bms_error = get_err_state(BMS);
     error_code_fb_pub->publish(error_code_fb);
 
@@ -486,10 +486,10 @@ void Chassis::speed_pub_callback(void)
         speed_fb.car_speed /= LINE_SPEED_TRANS_GAIN_MPS;
         speed_fb.turn_speed = SpeedData.turn_speed;
         speed_fb.turn_speed /= ANGULAR_SPEED_TRANS_GAIN_RADPS;
-        speed_fb.l_speed = SpeedData.l_speed;
-        speed_fb.l_speed /= LINE_SPEED_TRANS_GAIN_MPS;
-        speed_fb.r_speed = SpeedData.r_speed;
-        speed_fb.r_speed /= LINE_SPEED_TRANS_GAIN_MPS;
+        speed_fb.fl_speed = SpeedData.car_speed;
+        speed_fb.fl_speed /= LINE_SPEED_TRANS_GAIN_MPS;
+        speed_fb.fr_speed = SpeedData.car_speed;
+        speed_fb.fr_speed /= LINE_SPEED_TRANS_GAIN_MPS;
         speed_fb.speed_timestamp = Speed_TimeStamp;
         speed_fb_pub->publish(speed_fb);
     }
@@ -499,8 +499,8 @@ void Chassis::ticks_pub_callback(void)
 {
     if (Tick_update == 1) {
         Tick_update = 0;
-        ticks_fb.l_ticks = TickData.l_ticks;
-        ticks_fb.r_ticks = TickData.r_ticks;
+        ticks_fb.rl_ticks = TickData.rl_ticks;
+        ticks_fb.rr_ticks = TickData.rr_ticks;
         ticks_fb.ticks_timestamp = Tick_TimeStamp;
         ticks_fb_pub->publish(ticks_fb);
     }
