@@ -307,7 +307,7 @@ void get_error_code_callback(const segway_msgs::msg::ErrorCodeFb::SharedPtr msg)
     if (print_error != 0) {
         RCLCPP_INFO(rclcpp::get_logger("drive_segway_sample"), "host_error[%#x], central_error[%#x], \
         left_motor_error[%#x], right_motor_error[%#x], bms_err[%#x]", 
-        msg->host_error, msg->central_error, msg->left_motor_error, msg->right_motor_error, msg->bms_error);
+        msg->host_error, msg->central_error, msg->rear_left_motor_error, msg->rear_right_motor_error, msg->bms_error);
     }
 }
 
