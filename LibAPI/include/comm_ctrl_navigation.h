@@ -176,40 +176,165 @@ void    iapBrakeBoard(void);//Operate on the Brake board: IAP
 bool    isHostIapOver(void);//Query whether a single IAP ends
 int16_t getHostIapResult(void);
 int16_t getHostIapErrorCode(void);
-int16_t get_calibrate_mid_value_status(void);//Whether to calibrate the mid_value: %d [calibrated:1; no calibrated:0]
-uint8_t get_chassis_central_SN(char * SN);//Get the SN code of MCU of chassis central board. [SN size>25 bytes; return: 1:success, 0:fail]
-uint8_t get_rotate_switch_stat(void); //Query the status of the in-situ rotation switch on che chassis
-uint8_t get_rotate_scheme_cfg(void);//Gets the configuration of the in situ turn scheme
-uint16_t check_version_matched_with_fw(void);//Check whether the Lib and chassis firmware versions match.[0:matched; 1:chassis version older; 2:host version older; 0xffff:get chassis versin overtime]
-int8_t get_bat_sn(char* bat_sn, uint8_t sn_len);   //Get the battery SN, bat_sn array dimension should not be less than 14.
-uint16_t get_bat_sw_version(void);// Get the version of the BMS
 
-void    iapBmsBoardByCentral(void);//upgrade the battery firmware
-int8_t getIapBmsEndFlag(void);  //get the result of battery IAP; return: 1-success; 0-start; -1: fail to stop car; -2-fail to iap(view the adb file)
+/**
+* @brief   Get chassis hang_mode
+* @return  1: in Hang_mode; 0: not in Hand_mode
+*/
+int16_t get_chassis_hang_mode(void);
 
-void 	set_cmd_vel(double linear_x,double angular_z);//Set the linear and angular speeds of the vehicle: m/s ; rad/s.
-uint8_t set_line_forward_max_vel(double linear_forward_max_x);//Set the maximum linear velocity in the direction of advance
-uint8_t set_line_backward_max_vel(double linear_backward_max_x);//Set the maximum linear velocity in the backward direction
-uint8_t set_angular_max_vel(double angular_max_z);//Set the maximum angular velocity
-uint8_t set_enable_ctrl(uint16_t enable_flag);//Set chassis movement enable
-int  	init_control_ctrl(void);//Chassis initialization
-void 	exit_control_ctrl(void);//Chassis software finished running
-void 	set_smart_car_serial(const char * serial_no);//Set the serial port name
-void 	set_comu_interface(comu_choice_e comu_choice); //Set communication interface: 'comu_serial': serial port; 'comu_can': CAN port
-uint8_t set_chassis_load_state(int16_t newLoadSet);//Sets whether the chassis parameters are empty or full load, 0: no_load, 1: full_load
-uint8_t set_chassis_poweroff(void);//Set two - wheel differential chassis shutdown
-void    setHostIapCanceled(void);
-uint8_t	set_calibrate_mid_value(void);//Sets the command to calibrate the median Angle of the front wheel of the chassis
-uint8_t reset_host_power_time_s(uint16_t reset_time_s); //Set the reset time after power failure of the upper machine; unit[second]
-uint8_t clear_chassis_error_code(void);//Clear the error code of the chassis, excluding warnings and exceptions
-int16_t enable_rotate_switch(uint8_t enable); //Enable the chassis to rotate in place switch, 1: enable ; 0:disable
-//below: Enable the roration in place. left_or_right--0: turn left; others: turn right. ret--0:success. call it once, not periodically.
-int32_t enable_chassis_in_situ_rotation(uint8_t left_or_right);
-void    disable_chassis_in_situ_ratotion(void); //disable the rotation in place.
-void    set_vel_of_rotation(double rotate_vel);//set the speed value in situ rotation mode. unit:rad/s
-void    checkAndIapAllFw(void);//Check for all firmware numbers, then iap firmwares that doesnot match current library.
-void    cfg_rotate_scheme_switch(uint8_t support_or_not);//Configuration of in-situ steering scheme switch.[1:support new in-situ rotationg function, others: not support]
-uint8_t set_chassis_buzzer(uint16_t buzzer_cmd);//configue the chassis buzzer to work. buzzer_cmd: 0-not work; other: work
+/**
+* @brief   Get the status of switch for charging MOS on the central board
+* @return  charging:1; no charge:0
+*/
+int16_t get_charge_mos_ctrl_status(void);
+
+/**
+* @brief   Get the SOC threshold of a low-power shutdown of the central board
+* @return  The SOC threshold
+*/
+uint16_t get_low_power_shutdown_threshold(void);
+
+/**
+* @brief   Get the charge mode
+* @return  0:no charge;1:line charge;2:dock charge
+*/
+uint16_t get_charge_mode_status(void);
+
+/**
+* @brief   Get the charge connect
+* @return  0:no connect;1:charge connect
+*/
+uint16_t get_charge_connect_status(void);
+
+/**
+* @brief   Set the linear and angular speeds of the vehicle
+* @param   linear_x: The linear speed in m/s
+* @param   angular_z: The angular speed in rad/s
+* @details The acceleration and deceleration parameters are as follows:
+*        No Load: linear speed acc and dec is 2 m/s2, angular speed acc and dec is 4 rad/s2
+*      Full Load: linear speed acc and dec is 2 m/s2, angular speed acc and dec is 2.68 rad/s2
+*/
+void set_cmd_vel(double linear_x,double angular_z);
+
+/**
+* @brief   Set the maximum linear velocity in the direction of advance
+* @param   linear_forward_max_x: The maximum linear velocity
+* @return  Status of the operation
+* @details The default value is 3 m/s, and the maximum configurable value is 3 m/s.
+*/
+uint8_t set_line_forward_max_vel(double linear_forward_max_x);
+
+/**
+* @brief   Set the maximum linear velocity in the backward direction
+* @param   linear_backward_max_x: The maximum linear velocity in the backward direction
+* @return  Status of the operation
+* @details The default value is 2 m/s, and the maximum configurable value is 2 m/s.
+*/
+uint8_t set_line_backward_max_vel(double linear_backward_max_x);
+
+/**
+* @brief   Set the maximum angular velocity
+* @param   angular_max_z: The maximum angular velocity
+* @return  Status of the operation
+* @details The default value is 3 rad/s, and the maximum configurable value is 3 rad/s.
+*/
+uint8_t set_angular_max_vel(double angular_max_z);
+
+/**
+* @brief   Set chassis movement enable
+* @param   enable_flag: The flag to enable or disable the movement
+* @return  Status of the operation
+*/
+uint8_t set_enable_ctrl(uint16_t enable_flag);
+
+/**
+* @brief   Chassis initialization
+* @return  Status of the initialization
+*/
+int init_control_ctrl(void);
+
+/**
+* @brief   Chassis software finished running
+*/
+void exit_control_ctrl(void);
+
+/**
+* @brief   Set the serial port name
+* @param   serial_no: The name of the serial port
+*/
+void set_smart_car_serial(const char * serial_no);
+
+/**
+* @brief   Set communication interface
+* @param   comu_choice: 'comu_serial': serial port; 'comu_can': CAN port
+*/
+void set_comu_interface(comu_choice_e comu_choice);
+
+/**
+* @brief   Sets whether the chassis parameters are empty or full load
+* @param   newLoadSet: 0: no_load, 1: full_load
+* @return  Status of the operation
+*/
+uint8_t set_chassis_load_state(int16_t newLoadSet);
+
+/**
+* @brief   Set two - wheel differential chassis shutdown
+* @return  Status of the operation
+*/
+uint8_t set_chassis_poweroff(void);
+
+/**
+* @brief   An order to remove the push status
+* @return  Status of the operation
+*/
+uint8_t set_remove_push_cmd(void);
+
+/**
+* @brief   Cancel the IAP operation of the host board
+*/
+void setHostIapCanceled(void);
+
+/**
+* @brief   Set chassis hang_mode
+* @param   enterHand: 1: enter the Hang_mode; 0: exit the Hand_mode
+*/
+void set_chassis_hang_mode(int16_t enterHand);
+
+/**
+* @brief   Set the switch for charging MOS on the central board
+* @param   on: charging:1, stop charging:0
+* @return  Status of the operation
+*/
+uint8_t set_charge_mos_ctrl(bool on);
+
+/**
+* @brief   Set the wording status of the buzzer
+* @param   buzzerSet: bit0:imu_calib_start; bit1:imu_calib_end;bit2:lowPower;bit3:error:bit4:chageFsm;bit5:xx;bit6:poweroff
+* @return  Status of the operation
+*/
+uint8_t set_buzzer_work_status(uint16_t buzzerSet);
+
+/**
+* @brief   Calibrate the IMU of the chassis
+* @return  ret:0:success; -1: fail to send cmd; -2: fail to calib; -3: overtime
+*/
+int8_t set_calib_gyro(void);
+
+/**
+* @brief   Set the SOC threshold for a low-power shutdown
+* @param   low_power_shutdown_threshold: The SOC threshold
+* @return  Status of the operation
+*/
+uint8_t set_low_power_shutdown_threshold(uint16_t low_power_shutdown_threshold);
+
+/**
+* @brief   Perform IAP on a single board
+* @param   path: The path to the firmware file
+* @param   boradname: The name of the board
+* @param   version: The version of the firmware
+* @return  The result of the operation
+*/
 extern int32_t IapSingerBoard(char * path,char * boradname,char* version);
 #endif
 
