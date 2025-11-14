@@ -164,20 +164,20 @@ Chassis::Chassis(rclcpp::Node::SharedPtr nh) : node(nh)
     timer_1hz = node->create_wall_timer(std::chrono::milliseconds(1000), std::bind(&Chassis::timer_1hz_callback, this));
 }
 
-void Chassis::ros_get_charge_mos_ctrl_status_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetChargeMosCtrlStatusCmd::Request> request,
-    std::shared_ptr<segway_msgs::srv::RosGetChargeMosCtrlStatusCmd::Response> response)
-{
-    int16_t ret = 0;
-    if (request->ros_get_chassis_charge_ctrl_status == true){
-        ret = get_charge_mos_ctrl_status();
-        response->chassis_charge_ctrl_status = ret;
-        RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "receive RosGetChargeMosCtrlStatusCmd cmd[%d], charge_ctrl_status[%d]", 
-                1, ret);
-    }
-    else {
-        RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_get_chassis_charge_ctrl_status false");
-    }
-}
+// void Chassis::ros_get_charge_mos_ctrl_status_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetChargeMosCtrlStatusCmd::Request> request,
+//     std::shared_ptr<segway_msgs::srv::RosGetChargeMosCtrlStatusCmd::Response> response)
+// {
+//     int16_t ret = 0;
+//     if (request->ros_get_chassis_charge_ctrl_status == true){
+//         ret = get_charge_mos_ctrl_status();
+//         response->chassis_charge_ctrl_status = ret;
+//         RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "receive RosGetChargeMosCtrlStatusCmd cmd[%d], charge_ctrl_status[%d]", 
+//                 1, ret);
+//     }
+//     else {
+//         RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_get_chassis_charge_ctrl_status false");
+//     }
+// }
 void Chassis::ros_get_load_param_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosGetLoadParamCmd::Request> request,
     std::shared_ptr<segway_msgs::srv::RosGetLoadParamCmd::Response> response)
 {
@@ -216,20 +216,20 @@ void Chassis::ros_get_vel_max_feedback_cmd_callback(const std::shared_ptr<segway
     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "forward_max_vel_fb:%d, backward_max_vel_fb:%d, angular_max_vel_fb:%d", 
         response->forward_max_vel_fb, response->backward_max_vel_fb, response->angular_max_vel_fb);
 }
-void Chassis::ros_set_charge_mos_ctrl_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetChargeMosCtrlCmd::Request> request,
-    std::shared_ptr<segway_msgs::srv::RosSetChargeMosCtrlCmd::Response> response)
-{
-    uint8_t ret;
-    if (request->ros_set_chassis_charge_ctrl == false) {
-        ret = set_charge_mos_ctrl(false);
-    }
-    else {
-        ret = set_charge_mos_ctrl(true);
-    }
-    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_set_chassis_charge_ctrl cmd[%d]", request->ros_set_chassis_charge_ctrl);
-    RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "chassis_set_charge_ctrl_result[%d]", ret);
-    response->chassis_set_charge_ctrl_result = ret;
-}
+// void Chassis::ros_set_charge_mos_ctrl_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetChargeMosCtrlCmd::Request> request,
+//     std::shared_ptr<segway_msgs::srv::RosSetChargeMosCtrlCmd::Response> response)
+// {
+//     uint8_t ret;
+//     if (request->ros_set_chassis_charge_ctrl == false) {
+//         ret = set_charge_mos_ctrl(false);
+//     }
+//     else {
+//         ret = set_charge_mos_ctrl(true);
+//     }
+//     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "ros_set_chassis_charge_ctrl cmd[%d]", request->ros_set_chassis_charge_ctrl);
+//     RCLCPP_INFO(rclcpp::get_logger("SmartCar"), "chassis_set_charge_ctrl_result[%d]", ret);
+//     response->chassis_set_charge_ctrl_result = ret;
+// }
 void Chassis::ros_set_chassis_enable_cmd_callback(const std::shared_ptr<segway_msgs::srv::RosSetChassisEnableCmd::Request> request,
     std::shared_ptr<segway_msgs::srv::RosSetChassisEnableCmd::Response> response)
 {
