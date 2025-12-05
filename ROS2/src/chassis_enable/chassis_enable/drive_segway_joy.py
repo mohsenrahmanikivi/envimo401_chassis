@@ -1,19 +1,14 @@
 #!/usr/bin/env python3
 """
-drive_segway_joy_with_grace_and_ramp.py
+drive_segway_joy_with_rotation_state.py
 
-Publishes cmd_vel at a fixed rate. If Joy stops:
- - hold the last valid command for `miss_grace_count` ticks,
- - then ramp last_valid -> zero over `ramp_down_time` seconds,
- - continue publishing zeros at the same fixed rate afterwards.
+This file is the previous drive_segway_joy node extended with:
+ - publishing rotation state on topic 'rotation_state' as std_msgs/UInt8
+ - parameter `rotation_state_publish_hz` (default 1.0) to publish the last received state at a constant rate
+ - on startup the node synchronously queries `/get_chassis_rotate_switch` and uses that result as the initial value
+ - any rising-edge press of buttons 0,1,2,3 triggers an async query to `/get_chassis_rotate_switch`; the async response updates the cached state
 
-Features:
- - In-place rotation mode controlled by /enable_chassis_rotate (segway_msgs/srv/RosEnableChassisRotateCmd).
- - Button indices: default enable=2, disable=3 (configurable via ROS params).
- - When rotate mode is enabled: linear.x is forced to 0 (and smoothing state zeroed).
- - When disabling rotate mode (via button or robot-disable), an immediate zero angular Twist
-   is published and smoothing state cleared before calling the rotate-disable service.
- - Robust async service handling with done-callbacks and fallbacks.
+Keep the rest of the original behavior (grace, ramp, rotate enable/disable interactions, etc.).
 """
 
 from typing import List, Tuple, Optional
@@ -25,9 +20,10 @@ from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSReliabilityPolicy
 
 from sensor_msgs.msg import Joy
 from geometry_msgs.msg import Twist
+from std_msgs.msg import UInt8
 
 # service types (must be available in your workspace)
-from segway_msgs.srv import RosSetChassisEnableCmd, RosEnableChassisRotateCmd
+from segway_msgs.srv import RosSetChassisEnableCmd, RosEnableChassisRotateCmd, RosGetChassisRotateSwitchCmd
 
 
 def apply_deadzone(value: float, deadzone: float) -> float:
@@ -67,6 +63,10 @@ class DriveSegwayJoy(Node):
         self.declare_parameter('miss_grace_count', 2)
         self.declare_parameter('ramp_down_time', 0.25)
 
+        # rotation state publisher params
+        self.declare_parameter('rotation_state_publish_hz', 1.0)
+        self.declare_parameter('rotation_state_topic', 'rotation_state')
+
         # ----- Read params -----
         self.max_lin = float(self.get_parameter('max_lin').value)
         self.min_turn_radius = float(self.get_parameter('min_turn_radius').value) or 1.0
@@ -99,6 +99,13 @@ class DriveSegwayJoy(Node):
         self.miss_grace_count = int(self.get_parameter('miss_grace_count').value)
         self.ramp_down_time = float(self.get_parameter('ramp_down_time').value)
 
+        # rotation state params
+        self.rotation_state_publish_hz = float(self.get_parameter('rotation_state_publish_hz').value)
+        if self.rotation_state_publish_hz <= 0.0:
+            self.get_logger().warn('rotation_state_publish_hz must be > 0; defaulting to 1 Hz')
+            self.rotation_state_publish_hz = 1.0
+        self.rotation_state_topic = str(self.get_parameter('rotation_state_topic').value)
+
         # derived
         self.max_ang = self.max_lin / self.min_turn_radius
 
@@ -119,11 +126,12 @@ class DriveSegwayJoy(Node):
         if not self.rotate_client.wait_for_service(timeout_sec=1.0):
             self.get_logger().warn(f'{self.rotate_service} not available yet; will retry on call')
 
-        # Try to ensure rotate disabled at startup (best-effort)
-        try:
-            self.call_rotate_service(False)
-        except Exception:
-            pass
+        # client to query chassis rotate switch and topic publisher for the response
+        self.get_rotate_switch_client = self.create_client(RosGetChassisRotateSwitchCmd, '/get_chassis_rotate_switch')
+        if not self.get_rotate_switch_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().warn('/get_chassis_rotate_switch not available yet; will retry on call')
+
+        self.rotation_state_pub = self.create_publisher(UInt8, self.rotation_state_topic, 10)
 
         # ----- Internal state -----
         self.prev_twist = Twist()            # smoothed twist
@@ -138,13 +146,27 @@ class DriveSegwayJoy(Node):
         self._consecutive_misses = 0
         self._ramp_start_time: Optional[float] = None
 
+        # last known rotation state (uint8). default 0 until we fetch.
+        self._last_rotation_state: int = 0
+
         # Timer for fixed-rate publishing
         timer_period = 1.0 / float(self.cmd_publish_hz)
         self._publish_timer = self.create_timer(timer_period, self._publish_timer_cb)
 
+        # Synchronously get initial rotation state before starting normal operation
+        try:
+            self._get_initial_rotation_state()
+        except Exception as e:
+            self.get_logger().warn(f'Failed to synchronously get initial rotation state: {e}')
+
+        # Timer to publish rotation_state periodically at configured Hz
+        rot_timer_period = 1.0 / float(self.rotation_state_publish_hz)
+        self._rotation_state_timer = self.create_timer(rot_timer_period, self._rotation_state_timer_cb)
+
         self.get_logger().info(
             f'drive_segway_joy ready: publish {self.cmd_publish_hz}Hz, watchdog={self.watchdog_timeout}s, '
-            f'miss_grace={self.miss_grace_count}, ramp_down={self.ramp_down_time}s, rotate_service={self.rotate_service}'
+            f'miss_grace={self.miss_grace_count}, ramp_down={self.ramp_down_time}s, rotate_service={self.rotate_service}, '
+            f'rotation_state_topic={self.rotation_state_topic} @{self.rotation_state_publish_hz}Hz'
         )
 
     # ---------------- helper functions ----------------
@@ -209,13 +231,30 @@ class DriveSegwayJoy(Node):
         try:
             res = future.result()  # may raise if service threw
             self.get_logger().info(f'Rotate service response for enable={requested_enable}: {res}')
-            # assume success if no exception; if your response contains an explicit success boolean
-            # you can inspect it here and revert if it's False.
         except Exception as e:
             self.get_logger().error(f'Rotate service call failed for enable={requested_enable}: {e}')
             if requested_enable and self._rotate_mode_enabled:
                 self.get_logger().warn('Reverting local rotate flag to False due to failed rotate-enable service call.')
                 self._rotate_mode_enabled = False
+
+    def _get_rotate_switch_done(self, future):
+        """
+        Called when get_chassis_rotate_switch service completes. Publishes the returned uint8 state to `rotation_state` topic
+        and updates internal cache.
+        """
+        try:
+            res = future.result()
+            state_val = int(getattr(res, 'chassis_rotate_state', 0))
+            self._last_rotation_state = state_val
+            msg = UInt8()
+            msg.data = state_val
+            try:
+                self.rotation_state_pub.publish(msg)
+                self.get_logger().info(f'Published rotation_state={state_val} from get_chassis_rotate_switch response.')
+            except Exception as e:
+                self.get_logger().error(f'Failed publishing rotation_state: {e}')
+        except Exception as e:
+            self.get_logger().error(f'get_chassis_rotate_switch service call failed: {e}')
 
     def _publish_instant_zero_angular(self):
         """
@@ -354,10 +393,30 @@ class DriveSegwayJoy(Node):
             # reinitialize last_buttons array if controller changed layout
             self.last_buttons = [0] * len(buttons)
 
-        # Button 0 -> enable chassis
+        # Button 0 -> disable rotation first (acts as Button 3) then enable chassis
         if len(buttons) > 0 and buttons[0] == 1 and self.last_buttons[0] == 0:
-            self.get_logger().info('Enable pressed -> calling set_chassis_enable(True)')
+            self.get_logger().info('Button 0 pressed -> first disabling rotate mode (acts as Button 3).')
+
+            # publish immediate zero angular then call rotate disable service and clear local flag
+            self._publish_instant_zero_angular()
+            # small pause to let the zero take effect (keeps behavior consistent with rotate-disable handling)
+            time.sleep(0.5)
+
+            called = self.call_rotate_service(False)
+            if self._rotate_mode_enabled:
+                self._rotate_mode_enabled = False
+            if not called:
+                self.get_logger().warn('Rotate-service disable call could not be started; rotate mode cleared locally.')
+
+            # Now enable the chassis after rotation has been disabled locally/optimistically
+            self.get_logger().info('Now calling set_chassis_enable(True) (Button 0).')
             self.call_enable_service(True)
+
+            # call get_chassis_rotate_switch service on button press (async) to refresh cached state
+            started = self.call_get_chassis_rotate_switch(True)
+            if not started:
+                self.get_logger().warn('get_chassis_rotate_switch call could not be started for Button 0 press.')
+
 
         # Button 1 -> disable chassis (also disable rotate mode)
         if len(buttons) > 1 and buttons[1] == 1 and self.last_buttons[1] == 0:
@@ -372,6 +431,11 @@ class DriveSegwayJoy(Node):
                 self._rotate_mode_enabled = False
             if not called:
                 self.get_logger().warn('Rotate-service disable call could not be started; rotate mode cleared locally.')
+
+            # call get_chassis_rotate_switch service on button press (async)
+            started = self.call_get_chassis_rotate_switch(True)
+            if not started:
+                self.get_logger().warn('get_chassis_rotate_switch call could not be started for Button 1 press.')
 
         # --- Rotate-mode enable/disable buttons ---
         # Enable rotate (edge)
@@ -389,6 +453,11 @@ class DriveSegwayJoy(Node):
             else:
                 self.get_logger().warn('Rotate-service enable call could not be started; staying in normal mode')
 
+            # call get_chassis_rotate_switch service on button press (async)
+            started_q = self.call_get_chassis_rotate_switch(True)
+            if not started_q:
+                self.get_logger().warn('get_chassis_rotate_switch call could not be started for Rotate-enable press.')
+
         # Disable rotate (edge)
         if 0 <= self.rotate_disable_button < len(buttons) and \
            buttons[self.rotate_disable_button] == 1 and \
@@ -403,6 +472,11 @@ class DriveSegwayJoy(Node):
             self._rotate_mode_enabled = False
             if not called:
                 self.get_logger().warn('Rotate-service disable call could not be started; rotate mode cleared locally.')
+
+            # call get_chassis_rotate_switch service on button press (async)
+            started = self.call_get_chassis_rotate_switch(True)
+            if not started:
+                self.get_logger().warn('get_chassis_rotate_switch call could not be started for Rotate-disable press.')
 
         # update last_buttons snapshot
         self.last_buttons = list(buttons)
@@ -487,6 +561,16 @@ class DriveSegwayJoy(Node):
         if self.debug_joy:
             self.get_logger().info(f'PUBLISH cmd_vel linear={publish_twist.linear.x:.3f} ang={publish_twist.angular.z:.3f}')
 
+    # ---------------- rotation state timer ----------------
+    def _rotation_state_timer_cb(self):
+        """Periodically publish the last known rotation state (uint8) at configured hz."""
+        try:
+            msg = UInt8()
+            msg.data = int(self._last_rotation_state)
+            self.rotation_state_pub.publish(msg)
+        except Exception as e:
+            self.get_logger().error(f'Failed to periodic-publish rotation_state: {e}')
+
     # ---------------- service callers ----------------
     def call_enable_service(self, enable: bool):
         if not self.enable_client.wait_for_service(timeout_sec=1.0):
@@ -497,8 +581,6 @@ class DriveSegwayJoy(Node):
             if hasattr(req, 'ros_set_chassis_enable_cmd'):
                 setattr(req, 'ros_set_chassis_enable_cmd', bool(enable))
             else:
-                # best-effort: try to set a similarly named field, otherwise log and return
-                # (adjust if your message field name differs)
                 self.get_logger().error('RosSetChassisEnableCmd.Request has no field "ros_set_chassis_enable_cmd"')
                 return
         except Exception as e:
@@ -533,12 +615,79 @@ class DriveSegwayJoy(Node):
 
         try:
             fut = self.rotate_client.call_async(req)
-            # attach callback to handle failures/success
             fut.add_done_callback(lambda f, en=enable: self._rotate_call_done(f, en))
             return True
         except Exception as e:
             self.get_logger().error(f'Failed to call rotate service: {e}')
             return False
+
+    def call_get_chassis_rotate_switch(self, query_value: bool) -> bool:
+        """
+        Calls the /get_chassis_rotate_switch service with ros_get_chassis_rotate_cmd set to query_value.
+        Returns True if the async call was started, False otherwise.
+        On completion, publishes the returned `chassis_rotate_state` uint8 on topic 'rotation_state'.
+        """
+        if not self.get_rotate_switch_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().warn('get_chassis_rotate_switch service not available; cannot query rotate switch')
+            return False
+
+        req = RosGetChassisRotateSwitchCmd.Request()
+        try:
+            if hasattr(req, 'ros_get_chassis_rotate_cmd'):
+                setattr(req, 'ros_get_chassis_rotate_cmd', bool(query_value))
+            else:
+                self.get_logger().error('RosGetChassisRotateSwitchCmd.Request does not have field "ros_get_chassis_rotate_cmd"')
+                return False
+        except Exception as e:
+            self.get_logger().error(f'Error preparing get_chassis_rotate_switch request: {e}')
+            return False
+
+        try:
+            fut = self.get_rotate_switch_client.call_async(req)
+            fut.add_done_callback(lambda f: self._get_rotate_switch_done(f))
+            return True
+        except Exception as e:
+            self.get_logger().error(f'Failed to call get_chassis_rotate_switch service: {e}')
+            return False
+
+    def _get_initial_rotation_state(self):
+        """
+        Synchronous attempt to get the initial rotation state at startup. Blocks briefly while waiting for result.
+        Updates internal cache and publishes the value immediately if successful.
+        """
+        if not self.get_rotate_switch_client.wait_for_service(timeout_sec=3.0):
+            self.get_logger().warn('get_chassis_rotate_switch service not available at startup; initial rotation_state left at default 0')
+            return
+
+        req = RosGetChassisRotateSwitchCmd.Request()
+        try:
+            if hasattr(req, 'ros_get_chassis_rotate_cmd'):
+                setattr(req, 'ros_get_chassis_rotate_cmd', True)
+            else:
+                self.get_logger().error('RosGetChassisRotateSwitchCmd.Request does not have field "ros_get_chassis_rotate_cmd"')
+                return
+        except Exception as e:
+            self.get_logger().error(f'Error preparing get_chassis_rotate_switch startup request: {e}')
+            return
+
+        try:
+            fut = self.get_rotate_switch_client.call_async(req)
+            # block here briefly until the future completes (or times out)
+            rclpy.spin_until_future_complete(self, fut, timeout_sec=2.0)
+            if fut.done():
+                res = fut.result()
+                state_val = int(getattr(res, 'chassis_rotate_state', 0))
+                self._last_rotation_state = state_val
+                msg = UInt8(); msg.data = state_val
+                try:
+                    self.rotation_state_pub.publish(msg)
+                    self.get_logger().info(f'Initial rotation_state={state_val} published at startup.')
+                except Exception as e:
+                    self.get_logger().error(f'Failed to publish initial rotation_state: {e}')
+            else:
+                self.get_logger().warn('Timed out waiting for initial get_chassis_rotate_switch response; using default 0')
+        except Exception as e:
+            self.get_logger().error(f'Failed to call get_chassis_rotate_switch at startup: {e}')
 
 
 def main(args=None):
