@@ -15,12 +15,12 @@ ROS2 packages for Segway chassis 100, 200, and 400 series.
 Go to the src of the package and find the LibAPI/lib folder
 If the host is x86, follow this
 ```bash
-sudo cp libctrl_x86_64.so /usr/local/lib/ && sudo chmod 
+sudo cp libctrl_x86_64.so /usr/local/lib/ && sudo chmod 755 /usr/local/lib/libctrl_x86_64.so && sudo ldconfig
 ```
 
 If the host is ARM64, follow this
 ```bash
-sudo cp libctrl_arm64-v8a.so /usr/local/lib/ && sudo chmod 
+sudo cp libctrl_arm64-v8a.so /usr/local/lib/ && sudo chmod 755 /usr/local/lib/libctrl_arm64-v8a.so && sudo ldconfig
 ```
 
 
